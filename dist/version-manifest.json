@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.1.1",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.1.0: licentiere (trial 15 zile + activare WhatsApp + Ed25519 identic ecosistemului GDC), Update Checker cu popup, VRAM (IOKit), toate cele 7 semnale DaVinci vizibile in panou, alerta spatiu disc CacheClip, semnare reala pregatita (APPLE_SIGN_IDENTITY_APP).",
+  "releaseNotes": "v1.1.1: verificare de revocare licenta prin Supabase (fail-open, aceeasi baza de date a ecosistemului GDC).",
   "platforms": {
     "macos": {
-      "version": "1.1.0",
-      "packageUrl": "dist/MediaFlowMonitor-macOS-1.1.0.zip",
-      "sha256": "57c51653aeb19eaa6b9469366779400d027ffaf24cf2fe415a6d15fe0a010374"
+      "version": "1.1.1",
+      "packageUrl": "dist/MediaFlowMonitor-macOS-1.1.1.zip",
+      "sha256": "3297a6369d5b255be3d1c900fffc7636790494f83b918d02f8464df8adb1253e"
     },
     "windows": {
       "version": "1.0.0",
