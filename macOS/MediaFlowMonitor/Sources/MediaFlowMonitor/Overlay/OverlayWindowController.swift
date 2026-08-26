@@ -12,12 +12,14 @@ final class OverlayWindowController: NSWindowController {
         self.metrics = metrics
         self.logWatcher = logWatcher
 
+        // Dashboard-ul Pro e mult mai mare decât mini-cardul inițial —
+        // fereastră titled/resizable, nu mai e un mic panou colțuit.
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 180),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 780, height: 720),
+            styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false
         )
-        panel.titleVisibility = .hidden
+        panel.title = "MediaFlow Monitor"
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
         panel.level = .floating
@@ -26,7 +28,7 @@ final class OverlayWindowController: NSWindowController {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.contentView = NSHostingView(
-            rootView: OverlayView(metrics: metrics, logWatcher: logWatcher)
+            rootView: DashboardView(metrics: metrics, logWatcher: logWatcher)
         )
         panel.center()
         panel.orderOut(nil) // pornește ascuns

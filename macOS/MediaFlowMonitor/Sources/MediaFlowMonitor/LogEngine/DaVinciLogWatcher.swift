@@ -91,6 +91,16 @@ final class DaVinciLogWatcher {
         }
     }
 
+    /// Forțează o rescanare imediată (Force Sync Log) — reia offset-ul de
+    /// la 0 dacă fișierul curent e mai mic decât ce știam (rotație de log),
+    /// altfel citește orice octeți noi apăruți între timp, fără să aștepte
+    /// următorul eveniment FSEvents.
+    func forceSync() {
+        let currentSize = (try? FileManager.default.attributesOfItem(atPath: logURL.path)[.size] as? UInt64) ?? 0
+        if currentSize < lastOffset { lastOffset = 0 }
+        readNewLines()
+    }
+
     static func parse(line: String) -> ResolveLogSignal? {
         if line.contains("GPU Memory Full") { return .gpuMemoryFull }
         if line.contains("Render Cache regenerated") { return .renderCacheRegenerated }

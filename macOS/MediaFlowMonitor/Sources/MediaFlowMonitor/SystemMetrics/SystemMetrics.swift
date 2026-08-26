@@ -12,6 +12,7 @@ struct MemorySnapshot: Equatable {
     let swapUsedGB: Double
     let swapLevel: MetricLevel
     let vramUsedGB: Double?
+    let cpuPerCore: [Double]
 }
 
 /// Citește RAM + Swap + (opțional) VRAM la interval adaptiv, fără polling agresiv.
@@ -55,7 +56,8 @@ final class SystemMetrics {
         snapshotPublisher.send(MemorySnapshot(
             ramUsedGB: ram.used, ramTotalGB: ram.total,
             swapUsedGB: swap, swapLevel: level,
-            vramUsedGB: VRAMProbe.readUsedGB()
+            vramUsedGB: VRAMProbe.readUsedGB(),
+            cpuPerCore: CPUMonitor.perCoreUsage()
         ))
     }
 
