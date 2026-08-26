@@ -77,12 +77,26 @@ public partial class App : Application
 
         _trayIcon = new NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadAppIcon(),
             Visible = true,
             Text = "MediaFlow Monitor",
             ContextMenuStrip = menu,
         };
         _trayIcon.DoubleClick += (_, _) => _overlay?.Toggle();
+    }
+
+    /// BUG FIX (2026-08-26): tray icon-ul folosea `SystemIcons.Application`
+    /// (iconița generică Windows) — `build-windows-exe.ps1` copiază deja
+    /// `Resources\GDC\gdc-icon.ico` lângă executabil, doar nu era citit.
+    private static System.Drawing.Icon LoadAppIcon()
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "Resources", "GDC", "gdc-icon.ico");
+            if (File.Exists(path)) return new System.Drawing.Icon(path);
+        }
+        catch { /* fallback mai jos */ }
+        return System.Drawing.SystemIcons.Application;
     }
 
     private void RefreshLicenseMenuText()
