@@ -29,6 +29,10 @@
     <!-- PerformanceCounter a fost scos din .NET Core/5+ in namespace-ul de
          baza si mutat intr-un pachet separat (forwarded type). -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <!-- Ed25519 pentru verificarea licentelor (LicenseCore.cs) - .NET nu
+         expune Ed25519 nativ pe Windows (CNG nu il suporta), BouncyCastle
+         e pur managed, cross-platform, standard pentru acest caz. -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
   </ItemGroup>
 
 </Project>
