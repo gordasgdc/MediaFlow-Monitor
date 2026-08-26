@@ -21,6 +21,13 @@
     <PublishReadyToRun>true</PublishReadyToRun>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- WFAC010: analizatorul WinForms recomanda ApplicationHighDpiMode in
+         locul DPI din manifest - dar asta e o app WPF (WinForms doar pentru
+         NotifyIcon), iar declararea PerMonitorV2 prin manifest ramane
+         metoda CORECTA si necesara pentru ferestrele WPF. Suprimat explicit
+         (nu eliminam DPI-ul din manifest, ar strica scalarea Dashboard-ului
+         pe monitoare cu DPI diferit). -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
