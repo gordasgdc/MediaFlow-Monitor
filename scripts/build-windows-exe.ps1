@@ -1,6 +1,11 @@
-# Rulează ACEST script pe mașina Windows (PowerShell), din rădăcina repo-ului.
-# Publică executabil standalone, self-contained, unpackaged (fără MSIX),
-# unsigned — conform fazei curente de dezvoltare privată.
+# Run THIS script on the Windows machine (PowerShell), from the repo root.
+# Publishes a standalone, self-contained, unpackaged executable (no MSIX),
+# unsigned - matches the current private-dev phase.
+#
+# NOTE: kept ASCII-only on purpose (no diacritics/em-dash) - Windows
+# PowerShell 5.1 can misparse non-ASCII comments in a non-UTF8-BOM file
+# and throw confusing "string missing terminator" errors far from the
+# real line.
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
@@ -8,32 +13,25 @@ $Proj = Join-Path $Root "Windows\MediaFlowMonitor\MediaFlowMonitor.csproj"
 $Out  = Join-Path $Root "Publish\Windows"
 
 Write-Host "-> dotnet publish (Release, self-contained, win-x64)..."
-# -p:Platform=x64 e OBLIGATORIU aici — fara el, csproj foloseste implicit
-# AnyCPU, iar WindowsAppSDK.SelfContained.targets refuza sa publice
-# self-contained pe AnyCPU (eroare: "The platform 'AnyCPU' is not
-# supported for Self Contained mode"). -r win-x64 singur NU seteaza $(Platform).
-dotnet publish $Proj `
-  -c Release `
-  -r win-x64 `
-  -p:Platform=x64 `
-  --self-contained true `
-  -p:WindowsAppSDKSelfContained=true `
-  -p:PublishSingleFile=false `
-  -o $Out
+# -p:Platform=x64 is REQUIRED here - without it the csproj defaults to
+# AnyCPU, and WindowsAppSDK.SelfContained.targets refuses to publish
+# self-contained on AnyCPU ("The platform 'AnyCPU' is not supported for
+# Self Contained mode"). -r win-x64 alone does NOT set $(Platform).
+dotnet publish $Proj -c Release -r win-x64 -p:Platform=x64 --self-contained true -p:WindowsAppSDKSelfContained=true -p:PublishSingleFile=false -o $Out
 
 if (-not (Test-Path $Out)) {
-  Write-Error "Publish esuat — folderul $Out nu a fost creat. Vezi eroarea dotnet publish de mai sus."
-  exit 1
+    Write-Error "Publish failed - $Out was not created. See the dotnet publish error above."
+    exit 1
 }
 
-Write-Host "-> Copiere manifest GDC + iconita in $Out..."
+Write-Host "-> Copying GDC manifest + icon into $Out..."
 Copy-Item (Join-Path $Root "gdc-manifest.json") $Out -Force
 $GdcOut = Join-Path $Out "Resources\GDC"
 New-Item -ItemType Directory -Force -Path $GdcOut | Out-Null
 Copy-Item (Join-Path $Root "Resources\GDC\gdc-icon.png") $GdcOut -Force
 Copy-Item (Join-Path $Root "Resources\GDC\gdc-icon.ico") $GdcOut -Force
 
-Write-Host "-> Impachetare arhiva privata de test (dist\)..."
+Write-Host "-> Packaging private test archive (dist\)..."
 $Version = "1.0.0"
 $DistDir = Join-Path $Root "dist"
 $ZipName = "MediaFlowMonitor-Windows-$Version.zip"
@@ -49,7 +47,7 @@ $Vm.platforms.windows.sha256 = $Sha256
 $Vm | ConvertTo-Json -Depth 10 | Set-Content $VersionManifestPath
 
 Write-Host ""
-Write-Host "Gata: $Out\MediaFlowMonitor.exe"
-Write-Host "Manifest GDC: $Out\gdc-manifest.json"
-Write-Host "Arhiva privata: $ZipPath (sha256: $Sha256)"
-Write-Host "Ruleaza direct .exe-ul, apoi testeaza Ctrl+Shift+M."
+Write-Host "Done: $Out\MediaFlowMonitor.exe"
+Write-Host "GDC manifest: $Out\gdc-manifest.json"
+Write-Host "Private archive: $ZipPath (sha256: $Sha256)"
+Write-Host "Run the .exe directly, then test Ctrl+Shift+M."
