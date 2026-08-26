@@ -173,7 +173,34 @@ struct DashboardView: View {
                 metricRing(label: "RAM", value: vm.ramFraction, level: vm.ramLevel)
                 metricRing(label: "Swap", value: vm.swapFraction, level: vm.swapLevel)
             }
+            if !vm.topRamProcesses.isEmpty || !vm.topSwapProcesses.isEmpty {
+                Divider()
+                HStack(alignment: .top, spacing: 16) {
+                    topConsumersList(title: "Top RAM Consumers", items: vm.topRamProcesses, unit: "GB")
+                    topConsumersList(title: "Top Swap Activity", items: vm.topSwapProcesses, unit: "GB")
+                }
+            }
         }
+    }
+
+    /// "Swap Activity" (nu "Swap folosit") — macOS nu expune public câți
+    /// octeți sunt efectiv scoși pe disc per proces (vezi comentariul din
+    /// ProcessInspector.swift); afișăm cea mai onestă aproximare posibilă.
+    private func topConsumersList(title: String, items: [ProcessUsage], unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+            if items.isEmpty {
+                Text("—").font(.caption2).foregroundStyle(.secondary)
+            }
+            ForEach(items) { item in
+                HStack {
+                    Text(item.name).font(.caption2).lineLimit(1)
+                    Spacer(minLength: 6)
+                    Text(String(format: "%.1f %@", item.valueGB, unit)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var healthDetailCard: some View {
@@ -238,31 +265,87 @@ struct DashboardView: View {
 
     // MARK: - Log decoder
 
+    private static let logKeywords = ["GPU Full", "GPU Memory Full", "Cache Drop", "Timeout", "crashed", "dropped"]
+
     private var logDecoderPanel: some View {
         card {
             HStack {
                 Text("Real-time Log Decoder").font(.headline)
                 Spacer()
+                Button { vm.exportLog() } label: { Image(systemName: "square.and.arrow.up") }
+                    .buttonStyle(.plain)
+                    .help("Export Log...")
+                Button { vm.toggleLogPause() } label: { Image(systemName: vm.isLogPaused ? "play.fill" : "pause.fill") }
+                    .buttonStyle(.plain)
+                    .help(vm.isLogPaused ? "Resume Auto-scroll" : "Pause Auto-scroll")
                 Button { vm.forceSyncLog() } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.plain)
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 3) {
-                    if vm.logConsole.isEmpty {
-                        Text("Niciun eveniment încă — se ascultă log-ul DaVinci Resolve...")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                ForEach(LogFilter.allCases) { filter in
+                    logFilterChip(filter)
+                }
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if vm.filteredLogConsole.isEmpty {
+                            Text("Niciun eveniment încă — se ascultă log-ul DaVinci Resolve...")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        ForEach(vm.filteredLogConsole) { entry in
+                            logLine(entry).id(entry.id)
+                        }
                     }
-                    ForEach(vm.logConsole) { entry in
-                        Text("\(entry.date.formatted(date: .omitted, time: .standard))  \(entry.text)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(color(for: entry.level))
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .onChange(of: vm.filteredLogConsole.count) { _ in
+                    guard !vm.isLogPaused, let first = vm.filteredLogConsole.first?.id else { return }
+                    withAnimation { proxy.scrollTo(first, anchor: .top) }
                 }
             }
             .frame(height: 160)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func logFilterChip(_ filter: LogFilter) -> some View {
+        let count = filter == .errors ? vm.errorCount : (filter == .warnings ? vm.warningCount : nil)
+        return Button {
+            vm.logFilter = filter
+        } label: {
+            HStack(spacing: 4) {
+                Text(filter.rawValue).font(.caption2)
+                if let count, count > 0 {
+                    Text("\(count)")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 4)
+                        .background(filter == .errors ? Color.red : Color.yellow, in: Capsule())
+                        .foregroundStyle(filter == .errors ? .white : .black)
+                }
+            }
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(vm.logFilter == filter ? Color.accentColor.opacity(0.25) : Color.gray.opacity(0.12), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Timp exact `HH:mm:ss [ERR]` monospațiat, cu highlight pe cuvinte cheie.
+    private func logLine(_ entry: LogConsoleEntry) -> some View {
+        let tag = entry.level == .critical ? "ERR" : (entry.level == .warning ? "WARN" : "OK")
+        var text = AttributedString("\(entry.date.formatted(date: .omitted, time: .standard)) [\(tag)] \(entry.text)")
+        text.font = .system(size: 11, design: .monospaced)
+        text.foregroundColor = color(for: entry.level)
+        for keyword in Self.logKeywords {
+            var searchRange = text.startIndex..<text.endIndex
+            while let range = text[searchRange].range(of: keyword, options: .caseInsensitive) {
+                text[range].font = .system(size: 11, weight: .bold, design: .monospaced)
+                text[range].backgroundColor = Color.yellow.opacity(0.25)
+                searchRange = range.upperBound..<text.endIndex
+            }
+        }
+        return Text(text)
     }
 
     // MARK: - Recommendations
@@ -289,6 +372,9 @@ struct DashboardView: View {
             HStack {
                 Text("CacheClip disk").font(.headline)
                 Spacer()
+                Button { vm.openCacheFolderInFinder() } label: { Image(systemName: "folder") }
+                    .buttonStyle(.plain)
+                    .help("Open Cache Folder in Finder")
                 Button("Schimbă folderul…") { vm.chooseCacheFolderManually() }
                     .buttonStyle(.link)
                     .font(.caption)
@@ -355,6 +441,13 @@ struct DashboardView: View {
         }
         actionButton(title: "Optimise System", running: .optimiseSystem, runningTitle: "Optimising…") {
             vm.optimiseSystem()
+        }
+        Button("Copy Diagnostics") { vm.copyDiagnosticsToClipboard() }
+        if vm.hangingDaVinciDetected {
+            actionButton(title: "Force Close Hanging DaVinci", running: .forceKillDaVinci, runningTitle: "Closing…") {
+                vm.forceCloseHangingDaVinci()
+            }
+            .foregroundStyle(.red)
         }
         if vm.runningAction != nil {
             Button("Vezi log") { vm.showActionConsole = true }

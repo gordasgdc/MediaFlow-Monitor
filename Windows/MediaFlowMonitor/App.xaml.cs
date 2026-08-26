@@ -45,6 +45,8 @@ public partial class App : Application
             _logWatcher.Start();
 
             _overlay = new OverlayWindow(_metrics, _logWatcher);
+            _overlay.ViewModel.BannerRequested += (_, banner) =>
+                _trayIcon?.ShowBalloonTip(4000, banner.Title, banner.Body, ToolTipIcon.Warning);
 
             _license = new LicenseManager();
             _license.PropertyChanged += (_, _) => Dispatcher.Invoke(RefreshLicenseMenuText);

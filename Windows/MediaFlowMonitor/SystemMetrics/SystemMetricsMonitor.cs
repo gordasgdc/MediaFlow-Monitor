@@ -11,7 +11,8 @@ public enum MetricLevel { Ok, Warning, Critical }
 public readonly record struct MemorySnapshot(
     double RamUsedGB, double RamTotalGB,
     double SwapUsedGB, MetricLevel SwapLevel,
-    double? VramUsedGB, double[] CpuPerCore);
+    double? VramUsedGB, double[] CpuPerCore,
+    List<ProcessUsage> TopRamProcesses, List<ProcessUsage> TopSwapProcesses);
 
 /// Citește RAM/Swap via PerformanceCounters, VRAM prin WMI (best-effort —
 /// Win32_VideoController.AdapterRAM e cunoscut plafonat la ~4GB pe unele
@@ -116,7 +117,8 @@ public sealed class SystemMetricsMonitor : IDisposable
             catch { vramUsedGB = null; }
         }
 
-        SnapshotReady?.Invoke(this, new MemorySnapshot(ramUsedGB, ramTotalGB, swapUsedGB, level, vramUsedGB, cpuPerCore));
+        var (topRam, topSwap) = ProcessInspector.TopProcesses();
+        SnapshotReady?.Invoke(this, new MemorySnapshot(ramUsedGB, ramTotalGB, swapUsedGB, level, vramUsedGB, cpuPerCore, topRam, topSwap));
 
         _timer?.Change(IsTimelineActive ? _activeInterval : _idleInterval, IsTimelineActive ? _activeInterval : _idleInterval);
     }

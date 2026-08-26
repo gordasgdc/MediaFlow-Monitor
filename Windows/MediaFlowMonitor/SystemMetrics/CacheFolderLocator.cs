@@ -65,6 +65,16 @@ public static class CacheFolderLocator
         return dialog.SelectedPath;
     }
 
+    /// Echivalentul revealInFinder() de pe Mac — deschide Explorer cu
+    /// folderul selectat, sau părintele lui dacă folderul încă nu există.
+    public static void RevealInExplorer()
+    {
+        var path = Directory.Exists(ActivePath) ? ActivePath : Path.GetDirectoryName(ActivePath);
+        if (path == null) return;
+        try { System.Diagnostics.Process.Start("explorer.exe", $"\"{path}\""); }
+        catch { /* best-effort, nu blocam UI-ul daca explorer.exe nu porneste */ }
+    }
+
     public static void ClearManualOverride()
     {
         using var key = Registry.CurrentUser.OpenSubKey(RegistryKey, writable: true);

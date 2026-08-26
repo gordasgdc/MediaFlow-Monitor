@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -95,6 +96,64 @@ public sealed class ActionButtonTextConverter : IValueConverter
         if (parts.Length != 3 || !Enum.TryParse<RunningAction>(parts[0], out var target)) return "";
         return current == target ? parts[2] : parts[1];
     }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// LogFilter curent == parametrul (numele enum-ului) -> fundal evidențiat
+/// pentru chip-ul de filtru activ ("All"/"Errors"/"Warnings"/"RenderEvents").
+public sealed class LogFilterToBackgroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not LogFilter current || parameter is not string paramStr) return System.Windows.Media.Brushes.Transparent;
+        return Enum.TryParse<LogFilter>(paramStr, out var target) && current == target
+            ? new SolidColorBrush(Color.FromArgb(60, 120, 160, 255))
+            : new SolidColorBrush(Color.FromArgb(25, 128, 128, 128));
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// Pause/Resume Auto-scroll — glifă text pentru buton (⏸ / ▶).
+public sealed class BoolToPauseGlyphConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is true ? "▶" : "⏸";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// Formatare "HH:mm:ss [ERR] text" pentru linia de log — combină Date+Text+Level
+/// într-un singur MultiBinding, echivalentul textului monospațiat de pe Mac.
+public sealed class LogLineFormatConverter : IMultiValueConverter
+{
+    private static readonly string[] Keywords = { "GPU Full", "GPU Memory Full", "Cache Drop", "Timeout", "crashed", "dropped" };
+
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values is not [DateTime date, string text, MetricLevel level]) return "";
+        var tag = level == MetricLevel.Critical ? "ERR" : level == MetricLevel.Warning ? "WARN" : "OK";
+        return $"{date:HH:mm:ss} [{tag}] {text}";
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+
+    /// True dacă textul conține un cuvânt cheie critic — folosit pentru bold.
+    public static bool ContainsKeyword(string text) =>
+        Keywords.Any(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
+}
+
+/// Bold dacă textul conține un cuvânt cheie de atenționat (GPU Full, Cache
+/// Drop, Timeout etc.) — highlight vizual, echivalentul bold-ului din Mac.
+public sealed class TextContainsKeywordToBoldConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is string s && LogLineFormatConverter.ContainsKeyword(s) ? FontWeights.Bold : FontWeights.Normal;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
