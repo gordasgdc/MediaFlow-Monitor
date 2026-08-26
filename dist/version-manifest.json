@@ -11,9 +11,11 @@
       "sha256": "cd682a9339fd7ff82da1e0fd7db082b20db0421172cf626cdd2b8c50d8a2afd1"
     },
     "windows": {
-      "version": "1.0.0",
-      "packageUrl": "dist/MediaFlowMonitor-Windows-1.0.0.zip",
-      "sha256": null
+      "version": "1.6.0",
+      "packageUrl": "dist/MediaFlowMonitorSetup-x64-1.6.0.exe",
+      "sha256": "dd7841845339d1bca464abb517efed51d50da2434d50bbe2b3ed2bf64e18fdc4",
+      "packageUrlArm64": "dist/MediaFlowMonitorSetup-arm64-1.6.0.exe",
+      "sha256Arm64": "4441981c364d3348862f1ef19730e20ec3fd226476393be6c38d7691fe4f22d2"
     }
   }
 }
