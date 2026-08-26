@@ -110,8 +110,17 @@ if ($LASTEXITCODE -ne 0) {
 $InstallerPath = Join-Path $DistDir "MediaFlowMonitorSetup-$Arch-$Version.exe"
 if (Test-Path $InstallerPath) {
     $InstallerSha256 = (Get-FileHash -Path $InstallerPath -Algorithm SHA256).Hash.ToLower()
+
+    # Copie STABILA (fara versiune in nume) - Regula 17, exceptia pentru
+    # linkul fix de pe site (releases/latest/download/...). Site-ul
+    # pointeaza mereu la asta, nu trebuie editat la fiecare release; copia
+    # versionata tot trebuie publicata ALATURI, niciodata doar cea stabila.
+    $StablePath = Join-Path $DistDir "MediaFlowMonitorSetup-$Arch.exe"
+    Copy-Item $InstallerPath $StablePath -Force
+
     Write-Host ""
     Write-Host "Done: $InstallerPath (sha256: $InstallerSha256)"
+    Write-Host "Stable copy: $StablePath"
     Write-Host "NOT signed - SmartScreen will warn on first run until a code-signing cert is bought."
 } else {
     Write-Error "Expected installer not found at $InstallerPath - check installer.iss OutputBaseFilename."
