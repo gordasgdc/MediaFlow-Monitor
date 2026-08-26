@@ -20,6 +20,13 @@
     <Platforms>x64;arm64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <SelfContained>true</SelfContained>
+    <!-- Fara asta, targets-ul MrtCore.PriGen (generare resources.pri/MRT)
+         cauta Microsoft.Build.Packaging.Pri.Tasks.dll — un DLL care exista
+         DOAR in instalarea Visual Studio completa, nu in SDK-ul CLI
+         standalone `dotnet` (eroare reala: MSB4062, task-ul nu poate fi
+         incarcat). Nu avem nevoie de PRI/MRT — resursele noastre sunt
+         .resx standard .NET, nu .resw/ms-resource. -->
+    <GenerateProjectPriFile>false</GenerateProjectPriFile>
   </PropertyGroup>
 
   <ItemGroup>
