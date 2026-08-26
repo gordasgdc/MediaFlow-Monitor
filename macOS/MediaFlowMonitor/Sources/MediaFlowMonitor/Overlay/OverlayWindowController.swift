@@ -15,7 +15,7 @@ final class OverlayWindowController: NSWindowController {
         // Dashboard-ul Pro e mult mai mare decât mini-cardul inițial —
         // fereastră titled/resizable, nu mai e un mic panou colțuit.
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 780, height: 720),
+            contentRect: NSRect(x: 0, y: 0, width: 860, height: 760),
             styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false
         )
@@ -30,9 +30,10 @@ final class OverlayWindowController: NSWindowController {
         panel.contentView = NSHostingView(
             rootView: DashboardView(metrics: metrics, logWatcher: logWatcher)
         )
-        // Redimensionare liberă, cu o dimensiune minimă de siguranță ca
-        // panourile (grafice, log decoder) să rămână lizibile.
-        panel.minSize = NSSize(width: 620, height: 560)
+        // Redimensionare liberă, cu o dimensiune minimă absolută sub care
+        // fereastra NU poate fi micșorată — sub acest prag cardurile/inelele
+        // s-ar suprapune peste bara de titlu (bug raportat, corectat 2026-08-26).
+        panel.minSize = NSSize(width: 800, height: 650)
         panel.center()
         panel.orderOut(nil) // pornește ascuns
 
