@@ -16,3 +16,4 @@ obj/
 /Build/
 /Publish/
 /dist/*.zip
+/dist/*.pkg

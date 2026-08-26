@@ -1,0 +1,8 @@
+#!/bin/bash
+# Rulat de pkgbuild INAINTE de a scrie payload-ul. Curata doar o instalare
+# veche ramasa (proces + bundle vechi la aceeasi cale) - NU are nicio
+# legatura cu quarantine/Gatekeeper (pachetul e semnat + notarizat +
+# stapled, vezi CLAUDE.md Regula 6/ÎNVECHIT 2026-08-25).
+pkill -x MediaFlowMonitor 2>/dev/null
+rm -rf "/Applications/MediaFlowMonitor.app"
+exit 0
