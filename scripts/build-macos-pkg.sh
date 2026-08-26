@@ -81,6 +81,19 @@ rm -rf "$PAYLOAD_ROOT" "$COMPONENT_PKG" "$DIST_DIR/Distribution.xml"
 cp "$FINAL_PKG" "$DIST_DIR/MediaFlowMonitor.pkg"
 
 SHA256=$(shasum -a 256 "$FINAL_PKG" | awk '{print $1}')
+
+# .pkg e artefactul PRINCIPAL de distribuție (site + update.json) — build-
+# macos-app.sh scrie mai devreme packageUrl/sha256 spre .zip; suprascriem
+# aici ca versiunea finală din version-manifest.json să reflecte mereu .pkg.
+python3 -c "
+import json, pathlib
+p = pathlib.Path('$DIST_DIR/version-manifest.json')
+d = json.loads(p.read_text())
+d['platforms']['macos']['packageUrl'] = 'dist/MediaFlowMonitor-$VERSION.pkg'
+d['platforms']['macos']['sha256'] = '$SHA256'
+p.write_text(json.dumps(d, indent=2) + '\n')
+"
+
 echo ""
 echo "✅ Gata: $FINAL_PKG (sha256: $SHA256)"
 echo "   Copie stabilă: $DIST_DIR/MediaFlowMonitor.pkg"
