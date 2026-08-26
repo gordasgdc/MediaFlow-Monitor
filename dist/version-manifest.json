@@ -1,6 +1,6 @@
 {
-  "_comment": "Schelet generic de auto-update \u2014 canal PRIVAT, f\u0103r\u0103 server real. Consumat local de aplica\u021bie pentru a compara versiunea instalat\u0103 cu cea din pachetul curent de test.",
-  "channel": "private-test",
+  "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
+  "channel": "public-beta",
   "latestVersion": "1.1.0",
   "minSupportedVersion": "1.0.0",
   "releaseNotes": "v1.1.0: licentiere (trial 15 zile + activare WhatsApp + Ed25519 identic ecosistemului GDC), Update Checker cu popup, VRAM (IOKit), toate cele 7 semnale DaVinci vizibile in panou, alerta spatiu disc CacheClip, semnare reala pregatita (APPLE_SIGN_IDENTITY_APP).",
@@ -8,7 +8,7 @@
     "macos": {
       "version": "1.1.0",
       "packageUrl": "dist/MediaFlowMonitor-macOS-1.1.0.zip",
-      "sha256": "0a503930f3b4c08dfd0b1d7a6d986e4381aa40d82a073a9b59d45cc9bfd56bf4"
+      "sha256": "57c51653aeb19eaa6b9469366779400d027ffaf24cf2fe415a6d15fe0a010374"
     },
     "windows": {
       "version": "1.0.0",

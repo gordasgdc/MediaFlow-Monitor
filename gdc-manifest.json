@@ -9,8 +9,8 @@
     "macos": {
       "executable": "Build/macOS/MediaFlowMonitor.app",
       "minOSVersion": "13.0",
-      "signed": false,
-      "notarized": false
+      "signed": true,
+      "notarized": true
     },
     "windows": {
       "executable": "Publish/Windows/MediaFlowMonitor.exe",
@@ -27,9 +27,9 @@
     "windows": "Ctrl+Shift+M"
   },
   "localization": ["en", "ro", "es"],
-  "buildStage": "private-dev",
+  "buildStage": "public-beta",
   "release": {
-    "channel": "private-test",
+    "channel": "public-beta",
     "checkIntervalHours": 12,
     "updateManifestPath": "dist/version-manifest.json"
   }
