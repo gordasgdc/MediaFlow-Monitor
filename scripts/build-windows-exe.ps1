@@ -71,10 +71,18 @@ Write-Host "Done: $Out\MediaFlowMonitor.exe ($Arch)"
 Write-Host "Private archive: $ZipPath (sha256: $Sha256)"
 
 # --- Installer nativ (Inno Setup) ---
+# winget instaleaza Inno Setup per-user, sub %LocalAppData%\Programs pe
+# multe masini (nu Program Files) - verificat live 2026-08-26.
 $Iscc = Get-Command "iscc.exe" -ErrorAction SilentlyContinue
 if (-not $Iscc) {
-    $CommonPath = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-    if (Test-Path $CommonPath) { $Iscc = Get-Item $CommonPath }
+    $CandidatePaths = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
+        "$env:LocalAppData\Programs\Inno Setup 6\ISCC.exe"
+    )
+    foreach ($p in $CandidatePaths) {
+        if (Test-Path $p) { $Iscc = Get-Item $p; break }
+    }
 }
 if (-not $Iscc) {
     Write-Host ""
