@@ -321,3 +321,28 @@ GDC viitoare (Mac și, unde tehnologia o permite, Windows):
   redimensionabilă, selector temă Dark/Light/System.** Vezi Regula 18 din
   Partea 1 — acest release a devenit standardul obligatoriu pentru orice
   aplicație GDC nouă de-acum încolo.
+- **2026-08-26 — Windows: Dashboard Pro + licențiere completă, netestat
+  build-real.** Portat integral pe WPF (fără schimbare de stack): grafice
+  VRAM/Swap (Polyline desenat procedural în `OverlayWindow.xaml.cs`, nu
+  binding XAML complex), CPU per-core (`PerformanceCounter`), VRAM prin
+  categoria "GPU Adapter Memory" (DXGI, fără SDK vendor), CacheClip cu
+  discuri externe (`DriveInfo` + `FolderBrowserDialog`), temă System/Dark/
+  Light (`ThemeManager.cs`, Registry `AppsUseLightTheme`), consolă live de
+  execuție (`ActionConsoleWindow`), și `Licensing/` complet (LicenseCore
+  Ed25519 via `BouncyCastle.Cryptography`, MachineID din
+  `HKLM\...\Cryptography\MachineGuid`, RevocationCheck, LicenseManager) —
+  prima implementare de licențiere Windows din TOT ecosistemul GDC.
+  **BUG FIX real găsit în timpul portării**: `SystemMetricsMonitor.
+  RamUsedGB` folosea `Environment.WorkingSet` (memoria PROCESULUI, nu RAM-ul
+  de sistem) — exista de la migrarea WPF inițială, nimeni nu-l observase.
+  **BUG FIX identic pe Mac ȘI Windows**: `LicenseManager.activate(serial:)`
+  exista de la v1.0 dar nu era conectat la NICIUN buton — fix cu
+  `NSAlert`+`NSTextField` (Mac) / `ActivationInputWindow.xaml` (Windows).
+  **Verificare reală făcută** (nu doar citire de cod): `dotnet build` de pe
+  Mac NU poate compila `net8.0-windows`/WPF (`NETSDK1082`, fără runtime pack
+  Windows Desktop) — codul XAML/WPF NU e verificat prin build real, doar
+  revizuit manual. Logica Ed25519/Base32 din `LicenseCore.cs` A FOST testată
+  real, izolat (proiect console separat `net8.0`, cross-platform): round-trip
+  Base32, sign+verify cu cheie de test, rejecție la tamper, încărcare cheie
+  publică GDC reală — toate au trecut. Rămâne necesar un test complet
+  `dotnet build`/`dotnet run` în Parallels înainte de orice release Windows.

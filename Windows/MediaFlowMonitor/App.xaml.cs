@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 using MediaFlowMonitor.LogEngine;
+using MediaFlowMonitor.Licensing;
 using MediaFlowMonitor.SystemMetrics;
 using MediaFlowMonitor.Overlay;
 using Application = System.Windows.Application;
@@ -17,6 +19,8 @@ public partial class App : Application
     private OverlayWindow? _overlay;
     private GlobalHotkey? _hotkey;
     private NotifyIcon? _trayIcon;
+    private LicenseManager? _license;
+    private ToolStripMenuItem? _licenseStatusItem;
 
     private static readonly string CrashLogPath = Path.Combine(Path.GetTempPath(), "MediaFlowMonitor-crash.log");
 
@@ -42,6 +46,9 @@ public partial class App : Application
 
             _overlay = new OverlayWindow(_metrics, _logWatcher);
 
+            _license = new LicenseManager();
+            _license.PropertyChanged += (_, _) => Dispatcher.Invoke(RefreshLicenseMenuText);
+
             SetupTrayIcon();
 
             _hotkey = new GlobalHotkey(modifiers: HotkeyModifiers.Control | HotkeyModifiers.Shift, key: 0x4D /* 'M' */);
@@ -59,6 +66,13 @@ public partial class App : Application
         var menu = new ContextMenuStrip();
         menu.Items.Add("Arata/Ascunde panoul (Ctrl+Shift+M)", null, (_, _) => _overlay?.Toggle());
         menu.Items.Add(new ToolStripSeparator());
+
+        _licenseStatusItem = new ToolStripMenuItem(_license?.StatusText ?? "") { Enabled = false };
+        menu.Items.Add(_licenseStatusItem);
+        menu.Items.Add($"Machine ID: {_license?.MachineIDDisplay}", null, (_, _) => CopyMachineID());
+        menu.Items.Add("Activeaza licenta (WhatsApp)...", null, (_, _) => OpenWhatsAppActivation());
+        menu.Items.Add("Introdu codul de activare...", null, (_, _) => PromptActivationCode());
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Iesire", null, (_, _) => Shutdown());
 
         _trayIcon = new NotifyIcon
@@ -70,6 +84,58 @@ public partial class App : Application
         };
         _trayIcon.DoubleClick += (_, _) => _overlay?.Toggle();
     }
+
+    private void RefreshLicenseMenuText()
+    {
+        if (_licenseStatusItem != null && _license != null)
+            _licenseStatusItem.Text = _license.StatusText;
+    }
+
+    private void CopyMachineID()
+    {
+        if (_license == null) return;
+        System.Windows.Clipboard.SetText(_license.MachineIDDisplay);
+    }
+
+    private void OpenWhatsAppActivation()
+    {
+        if (_license == null) return;
+        Process.Start(new ProcessStartInfo(_license.WhatsAppActivationUrl) { UseShellExecute = true });
+    }
+
+    /// BUG FIX (paritate cu Mac, 2026-08-26): fara fereastra dedicata de
+    /// input, un client care primea codul pe WhatsApp nu avea cum sa-l
+    /// introduca in aplicatie.
+    private void PromptActivationCode()
+    {
+        if (_license == null) return;
+        var window = new ActivationInputWindow();
+        if (window.ShowDialog() != true || string.IsNullOrWhiteSpace(window.EnteredCode)) return;
+
+        var error = _license.Activate(window.EnteredCode);
+        if (error == null)
+        {
+            RefreshLicenseMenuText();
+            System.Windows.MessageBox.Show(
+                "Licenta a fost activata cu succes. Multumim pentru sustinere!",
+                "Activare reusita", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show(ActivationErrorText(error.Value),
+                "Activare esuata", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private static string ActivationErrorText(LicenseCore.ValidationError error) => error switch
+    {
+        LicenseCore.ValidationError.MalformedCode => "Codul introdus nu e valid (format gresit).",
+        LicenseCore.ValidationError.BadSignature => "Codul nu a putut fi verificat (semnatura invalida).",
+        LicenseCore.ValidationError.WrongProduct => "Acest cod e pentru alta aplicatie.",
+        LicenseCore.ValidationError.WrongMachine => "Acest cod e blocat pe alt calculator. Trimite Machine ID-ul curent pentru un cod nou.",
+        LicenseCore.ValidationError.Expired => "Codul a expirat.",
+        _ => "Eroare necunoscuta.",
+    };
 
     private static void LogCrash(string source, Exception? ex)
     {
