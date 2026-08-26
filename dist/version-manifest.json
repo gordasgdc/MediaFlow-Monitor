@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.5.1",
+  "latestVersion": "1.6.0",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.5.1: BUG FIX critic Auto-Update - Cauta actualizari nu mai raporta fals \"Esti la zi\" la un esec de retea/parsing (era confundat cu \"nu exista update\"); comparare SemVer robusta (Major.Minor.Patch, ignora prefix v); cache-bypass explicit pe cerere (cachePolicy + header no-cache), pe langa query param unic deja existent.",
+  "releaseNotes": "v1.6.0: BUG FIX critic Licentiere - butonul de activare exista din v1.0 dar nu era conectat la nimic; adaugat Introdu codul de activare... in meniul din bara de sus, cu mesaje clare de eroare (cod invalid/gresit produs/gresita masina/expirat).",
   "platforms": {
     "macos": {
-      "version": "1.5.1",
-      "packageUrl": "dist/MediaFlowMonitor-1.5.1.pkg",
-      "sha256": "25b6d203e3bfe550d185c4e0613cf814854de4359a18eb6b6da4612527560b7b"
+      "version": "1.6.0",
+      "packageUrl": "dist/MediaFlowMonitor-1.6.0.pkg",
+      "sha256": "cd682a9339fd7ff82da1e0fd7db082b20db0421172cf626cdd2b8c50d8a2afd1"
     },
     "windows": {
       "version": "1.0.0",
