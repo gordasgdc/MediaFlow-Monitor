@@ -28,6 +28,12 @@ if [ -n "$BUNDLE_PATH" ]; then
   cp -R "$BUNDLE_PATH" "$APP_PATH/Contents/Resources/"
 fi
 
+# BUG FIX: manifestul GDC stătea liber lângă .app în zip ("fișiere scoase
+# aiurea"). Acum e încapsulat ÎN bundle — nimic în afara .app la livrare.
+mkdir -p "$APP_PATH/Contents/Resources/GDC"
+cp "$ROOT/gdc-manifest.json" "$APP_PATH/Contents/Resources/GDC/"
+cp "$ROOT/Resources/GDC/gdc-icon.png" "$APP_PATH/Contents/Resources/GDC/"
+
 echo "→ Generare AppIcon.icns din AppIcon.appiconset…"
 ICONSET_TMP="$BUILD_OUT/AppIcon.iconset"
 rm -rf "$ICONSET_TMP"
@@ -43,14 +49,8 @@ rm -rf "$ICONSET_TMP"
 echo "→ Semnare ad-hoc (fără notarization, conform fazei curente)…"
 codesign --force --deep -s - "$APP_PATH"
 
-echo "→ Copiere manifest GDC + iconiță în $BUILD_OUT…"
-cp "$ROOT/gdc-manifest.json" "$BUILD_OUT/"
-mkdir -p "$BUILD_OUT/Resources/GDC"
-cp "$ROOT/Resources/GDC/gdc-icon.png" "$BUILD_OUT/Resources/GDC/"
-cp "$ROOT/Resources/GDC/gdc-icon.ico" "$BUILD_OUT/Resources/GDC/"
-
 echo "→ Împachetare arhivă privată de test (dist/)…"
-VERSION="1.0.0"
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist")
 DIST_DIR="$ROOT/dist"
 ZIP_NAME="MediaFlowMonitor-macOS-$VERSION.zip"
 mkdir -p "$DIST_DIR"
@@ -59,7 +59,7 @@ STAGE="$BUILD_OUT/_staging"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -R "$APP_PATH" "$STAGE/"
-cp "$ROOT/gdc-manifest.json" "$STAGE/"
+# NIMIC în afara .app — manifestul GDC e deja încapsulat în Contents/Resources/GDC/
 (cd "$STAGE" && zip -qr "$DIST_DIR/$ZIP_NAME" .)
 rm -rf "$STAGE"
 
@@ -73,7 +73,6 @@ p.write_text(json.dumps(d, indent=2) + '\n')
 "
 
 echo ""
-echo "✅ Gata: $APP_PATH"
-echo "   Manifest GDC: $BUILD_OUT/gdc-manifest.json"
-echo "   Arhivă privată: $DIST_DIR/$ZIP_NAME (sha256: $SHA256)"
+echo "✅ Gata: $APP_PATH (v$VERSION)"
+echo "   Arhivă privată: $DIST_DIR/$ZIP_NAME (sha256: $SHA256) — conține DOAR .app"
 echo "   Deschide .app cu dublu-click din Finder, apoi testează Cmd+Shift+M."
