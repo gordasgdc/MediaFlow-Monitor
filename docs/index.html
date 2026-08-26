@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>MediaFlow Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --bg-elevated: #14171b;
+    --border: #23272d;
+    --text: #e8eaed;
+    --text-dim: #9aa1a9;
+    --green: #3ddc84;
+    --amber: #ffb347;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 64px 24px 96px; }
+  header { text-align: center; margin-bottom: 56px; }
+  .logo {
+    width: 84px; height: 84px; margin: 0 auto 20px;
+    display: block;
+  }
+  h1 {
+    font-size: 2.4rem; margin: 0 0 8px;
+    background: linear-gradient(90deg, var(--green), var(--amber));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tagline { color: var(--text-dim); font-size: 1.05rem; margin: 0; }
+  .badges { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .badge {
+    border: 1px solid var(--border); background: var(--bg-elevated);
+    color: var(--text-dim); font-size: 0.8rem; padding: 5px 12px; border-radius: 999px;
+  }
+  .badge.private { color: var(--amber); border-color: #4a3a1f; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 48px 0; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .feature {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+  }
+  .feature h3 { margin: 0 0 6px; font-size: 1rem; }
+  .feature p { margin: 0; color: var(--text-dim); font-size: 0.9rem; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .dot.g { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.a { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+  .downloads { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 40px 0; }
+  @media (max-width: 640px) { .downloads { grid-template-columns: 1fr; } }
+  .dl-card {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; text-align: center;
+  }
+  .dl-card h3 { margin: 0 0 4px; }
+  .dl-card .ver { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 18px; }
+  .btn {
+    display: inline-block; width: 100%; padding: 12px 20px;
+    background: linear-gradient(90deg, var(--green), #2fb56d);
+    color: #08130d; font-weight: 600; text-decoration: none;
+    border-radius: 10px; font-size: 0.95rem;
+  }
+  .btn.disabled {
+    background: var(--bg); color: var(--text-dim); border: 1px dashed var(--border);
+    pointer-events: none;
+  }
+  .hash { font-size: 0.7rem; color: var(--text-dim); word-break: break-all; margin-top: 10px; }
+
+  .warning {
+    background: #1f1a0e; border: 1px solid #4a3a1f; border-radius: 12px;
+    padding: 18px 20px; margin: 32px 0; font-size: 0.9rem; color: #f2d9a8;
+  }
+  .warning strong { color: var(--amber); }
+  .steps { margin: 8px 0 0; padding-left: 20px; }
+  .steps li { margin-bottom: 6px; }
+  code {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1px 6px; font-size: 0.85em;
+  }
+
+  footer { text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-top: 64px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img class="logo" src="../Shared/Icon/icon_256.png" alt="MediaFlow Monitor">
+    <h1>MediaFlow Monitor</h1>
+    <p class="tagline">Monitorizare resurse &amp; diagnosticare DaVinci Resolve, în timp real.</p>
+    <div class="badges">
+      <span class="badge">macOS 13+</span>
+      <span class="badge">Windows 10 1809+</span>
+      <span class="badge">v1.0.0</span>
+      <span class="badge private">● Build privat de test — nesemnat</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="feature">
+      <h3><span class="dot g"></span>Zero overhead</h3>
+      <p>Cod nativ (SwiftUI / WinUI 3), fără Electron. Polling adaptiv 1–3s, FSEvents / FileSystemWatcher.</p>
+    </div>
+    <div class="feature">
+      <h3><span class="dot g"></span>Semafor vizual instant</h3>
+      <p>RAM, Swap și semnale din log-urile DaVinci — verde/galben/roșu, fără tabele.</p>
+    </div>
+    <div class="feature">
+      <h3><span class="dot a"></span>Overlay pe scurtătură</h3>
+      <p><code>Cmd+Shift+M</code> pe macOS, <code>Ctrl+Shift+M</code> pe Windows.</p>
+    </div>
+    <div class="feature">
+      <h3><span class="dot a"></span>RO / EN / ES</h3>
+      <p>Localizare completă din prima versiune.</p>
+    </div>
+  </div>
+
+  <div class="downloads">
+    <div class="dl-card">
+      <h3>macOS</h3>
+      <div class="ver">MediaFlowMonitor-macOS-1.0.0.zip · 692 KB</div>
+      <a class="btn" href="../dist/MediaFlowMonitor-macOS-1.0.0.zip" download>Download .zip</a>
+      <div class="hash">SHA-256: 03b8f96fcce65cefa83cefecddf7357347c7e409cc9b579e46109c9826063971</div>
+    </div>
+    <div class="dl-card">
+      <h3>Windows</h3>
+      <div class="ver">Generat local — rulează scriptul pe mașina Windows</div>
+      <a class="btn disabled" href="#">Nedisponibil încă</a>
+      <div class="hash">Vezi instrucțiunile de build mai jos</div>
+    </div>
+  </div>
+
+  <div class="warning">
+    <strong>⚠️ Build nesemnat — pachet de test intern.</strong>
+    <ol class="steps">
+      <li><strong>macOS:</strong> dezarhivează, apoi în Finder <strong>click-dreapta pe MediaFlowMonitor.app → Deschide</strong> (nu dublu-click) la prima rulare, pentru a trece de Gatekeeper.</li>
+      <li><strong>Windows:</strong> la avertismentul "Windows protected your PC", apasă <strong>More info → Run anyway</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="feature">
+    <h3>Build Windows local</h3>
+    <p>Din rădăcina repo-ului, pe mașina Windows:</p>
+    <code>powershell -ExecutionPolicy Bypass -File scripts\build-windows-exe.ps1</code>
+    <p style="margin-top:10px">Rezultă <code>dist\MediaFlowMonitor-Windows-1.0.0.zip</code>, cu <code>gdc-manifest.json</code> inclus.</p>
+  </div>
+
+  <footer>
+    Pagină de prezentare locală — fără server, fără distribuție publică.<br>
+    Repo privat · fază de dezvoltare · v1.0.0
+  </footer>
+
+</div>
+</body>
+</html>
