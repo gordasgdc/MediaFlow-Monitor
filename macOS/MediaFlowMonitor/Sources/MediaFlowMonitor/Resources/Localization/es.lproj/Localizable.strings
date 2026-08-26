@@ -1,0 +1,13 @@
+"overlay.title" = "MediaFlow";
+"metric.ram" = "RAM";
+"metric.swap" = "Swap";
+"action.purgeCache" = "Purgar Caché";
+"action.bypassFX" = "Omitir FX";
+"action.revealCacheFolder" = "Abrir Carpeta de Caché";
+"signal.gpuMemoryFull" = "Memoria GPU llena";
+"signal.pluginCrash" = "Plugin fallido: %@";
+"signal.droppedFrames" = "%d fotogramas perdidos";
+"signal.renderCacheRegenerated" = "Caché de render regenerada";
+"signal.fusionSlowNode" = "Nodo Fusion lento (%d ms)";
+"signal.codecSoftwareFallback" = "Decodificación por software (%@)";
+"signal.dbConnectionLost" = "Conexión a base de datos perdida";
