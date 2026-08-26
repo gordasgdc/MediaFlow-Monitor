@@ -22,33 +22,17 @@ $Proj = Join-Path $Root "Windows\MediaFlowMonitor\MediaFlowMonitor.csproj"
 $Out  = Join-Path $Root "Publish\Windows"
 $Rid  = "win-$Arch"
 
-# KNOWN ISSUE (real, hit and fixed 2026-08-26): building this WinUI3
-# project with the standalone `dotnet` CLI fails with:
-#   MSB4062: The "Microsoft.Build.Packaging.Pri.Tasks.ExpandPriContent"
-#   task could not be loaded from ...\dotnet\sdk\<ver>\Microsoft\
-#   VisualStudio\v<ver>\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll
-# That DLL ships ONLY with Visual Studio's "WinUI application development"
-# workload, at a DIFFERENT path (...\Microsoft Visual Studio\<ver>\
-# Community\MSBuild\...\AppxPackage\), and the dotnet SDK's own targets
-# expect it colocated with the SDK. Fix (one-time, Admin PowerShell):
-#   $src = "C:\Program Files\Microsoft Visual Studio\<VS-ver>\Community\MSBuild\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
-#   $dst = "C:\Program Files\dotnet\sdk\<SDK-ver>\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
-#   New-Item -ItemType Directory -Force -Path $dst | Out-Null
-#   Copy-Item "$src\*" $dst -Recurse -Force
-# (adjust <VS-ver>/<SDK-ver> to what `dotnet --version` / VS Installer show)
-$PriTaskProbe = Get-ChildItem -Path "C:\Program Files\dotnet\sdk" -Filter "Microsoft.Build.Packaging.Pri.Tasks.dll" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $PriTaskProbe) {
-    Write-Warning "Microsoft.Build.Packaging.Pri.Tasks.dll not found under the dotnet SDK folder - the build below will likely fail with MSB4062. See the comment block above this line for the one-time Admin PowerShell fix."
-}
-
-# KNOWN ISSUE (real, hit 2026-08-26): on an Apple Silicon Mac running
-# Windows via Parallels, the VM is ARM64 Windows. A win-x64 build runs
-# under x64 emulation, and WinUI3/WinRT apps can crash immediately with
-# "Exception code: 0xc000027b" faulting in combase.dll (STATUS_FATAL_APP_EXIT)
-# - a known-flaky combination of WinRT activation + x64 emulation on ARM64.
-# Fix: build natively for win-arm64 instead (-Arch arm64).
+# SWITCHED TO WPF (2026-08-26): WinUI3/WindowsAppSDK caused a chain of
+# unfixable native crashes (PRI DLL missing from dotnet SDK, then
+# 0xc000027b in combase.dll under x64-on-ARM64 emulation, then 0xc0000409
+# crashing before ANY of our C# code ran - even on native ARM64). Switched
+# the Windows UI to plain WPF, which has none of these MSIX/PRI/WinRT
+# bootstrap dependencies and builds/runs with a plain `dotnet publish`.
+# On an Apple Silicon Mac + Parallels, the VM is ARM64 Windows - use
+# -Arch arm64 for a native build (x64 also works via emulation with WPF,
+# since WPF has no WinRT bootstrap to trip over).
 Write-Host "-> dotnet publish (Release, self-contained, $Rid)..."
-dotnet publish $Proj -c Release -r $Rid -p:Platform=$Arch --self-contained true -p:WindowsAppSDKSelfContained=true -p:PublishSingleFile=false -o $Out
+dotnet publish $Proj -c Release -r $Rid --self-contained true -p:PublishSingleFile=false -o $Out
 
 if (-not (Test-Path $Out)) {
     Write-Error "Publish failed - $Out was not created. See the dotnet publish error above."

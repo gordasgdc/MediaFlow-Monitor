@@ -2,41 +2,32 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <!-- SWITCH la WPF (2026-08-26): WinUI3/WindowsAppSDK produsese o
+         serie de crash-uri native netratabile din C# (bootstrap WinRT
+         esuat, cod 0xc0000409, inainte sa ruleze orice linie din codul
+         nostru) pe Windows ARM64 (Parallels pe Apple Silicon). WPF ruleaza
+         pe .NET simplu, fara MSIX/PRI/bootstrap WinRT, testat si stabil
+         de ani de zile prin `dotnet publish` simplu. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>MediaFlowMonitor</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <UseWinUI>true</UseWinUI>
+    <UseWPF>true</UseWPF>
+    <!-- Doar pentru NotifyIcon (tray icon) - WPF nu are un echivalent
+         nativ, System.Windows.Forms.NotifyIcon e standardul folosit de
+         orice app WPF care are nevoie de iconita in system tray. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Zero overhead: self-contained trimmed, fără runtime greu -->
     <PublishReadyToRun>true</PublishReadyToRun>
-    <!-- Unpackaged (fără MSIX) — cerut explicit: .exe standalone, nu instalare din Store/App Installer. -->
-    <EnableMsixTooling>false</EnableMsixTooling>
-    <WindowsPackageType>None</WindowsPackageType>
-    <!-- WindowsAppSDK self-contained NU acceptă AnyCPU — trebuie o platformă
-         concretă declarată aici, plus -p:Platform=x64 dat explicit la publish
-         (vezi scripts/build-windows-exe.ps1). -->
-    <Platforms>x64;arm64</Platforms>
-    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <SelfContained>true</SelfContained>
-    <!-- Fara asta, targets-ul MrtCore.PriGen (generare resources.pri/MRT)
-         cauta Microsoft.Build.Packaging.Pri.Tasks.dll — un DLL care exista
-         DOAR in instalarea Visual Studio completa, nu in SDK-ul CLI
-         standalone `dotnet` (eroare reala: MSB4062, task-ul nu poate fi
-         incarcat). Nu avem nevoie de PRI/MRT — resursele noastre sunt
-         .resx standard .NET, nu .resw/ms-resource. -->
-    <GenerateProjectPriFile>false</GenerateProjectPriFile>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Regula 17: versiuni fixate explicit, fără range/wildcards -->
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240311000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <!-- PerformanceCounter a fost scos din .NET Core/5+ in namespace-ul de
-         baza si mutat intr-un pachet separat (forwarded type) - fara el,
-         SystemMetricsMonitor.cs nu compileaza (CS1069). -->
+         baza si mutat intr-un pachet separat (forwarded type). -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
   </ItemGroup>
 
