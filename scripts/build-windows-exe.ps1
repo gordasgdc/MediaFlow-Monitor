@@ -58,17 +58,12 @@ $ZipPath = Join-Path $DistDir $ZipName
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Compress-Archive -Path (Join-Path $Out "*") -DestinationPath $ZipPath
 
-$Sha256 = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()
+$ZipSha256 = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()
 $VersionManifestPath = Join-Path $DistDir "version-manifest.json"
-$Vm = Get-Content $VersionManifestPath -Raw | ConvertFrom-Json
-$Vm.platforms.windows.version = $Version
-$Vm.platforms.windows.packageUrl = "dist/MediaFlowMonitorSetup-$Arch-$Version.exe"
-$Vm.platforms.windows.sha256 = $Sha256
-$Vm | ConvertTo-Json -Depth 10 | Set-Content $VersionManifestPath
 
 Write-Host ""
 Write-Host "Done: $Out\MediaFlowMonitor.exe ($Arch)"
-Write-Host "Private archive: $ZipPath (sha256: $Sha256)"
+Write-Host "Private archive: $ZipPath (sha256: $ZipSha256)"
 
 # --- Installer nativ (Inno Setup) ---
 # winget instaleaza Inno Setup per-user, sub %LocalAppData%\Programs pe
@@ -117,6 +112,23 @@ if (Test-Path $InstallerPath) {
     # versionata tot trebuie publicata ALATURI, niciodata doar cea stabila.
     $StablePath = Join-Path $DistDir "MediaFlowMonitorSetup-$Arch.exe"
     Copy-Item $InstallerPath $StablePath -Force
+
+    # BUG FIX (2026-08-26): scriam aici sha256-ul arhivei .zip de test sub
+    # packageUrl-ul installer-ului .exe - hash gresit fata de fisierul chiar
+    # publicat. Scriem acum EXCLUSIV din installer-ul real, dupa ce exista
+    # pe disc, si NUMAI campurile arhitecturii curente (x64 sau arm64), ca
+    # sa nu suprascriem accidental campurile celeilalte arhitecturi daca
+    # scriptul ruleaza o singura data per arh.
+    $Vm = Get-Content $VersionManifestPath -Raw | ConvertFrom-Json
+    $Vm.platforms.windows.version = $Version
+    if ($Arch -eq "arm64") {
+        $Vm.platforms.windows.packageUrlArm64 = "dist/MediaFlowMonitorSetup-$Arch-$Version.exe"
+        $Vm.platforms.windows.sha256Arm64 = $InstallerSha256
+    } else {
+        $Vm.platforms.windows.packageUrl = "dist/MediaFlowMonitorSetup-$Arch-$Version.exe"
+        $Vm.platforms.windows.sha256 = $InstallerSha256
+    }
+    $Vm | ConvertTo-Json -Depth 10 | Set-Content $VersionManifestPath
 
     Write-Host ""
     Write-Host "Done: $InstallerPath (sha256: $InstallerSha256)"

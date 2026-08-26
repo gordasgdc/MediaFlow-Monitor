@@ -17,3 +17,4 @@ obj/
 /Publish/
 /dist/*.zip
 /dist/*.pkg
+/dist/*.exe
