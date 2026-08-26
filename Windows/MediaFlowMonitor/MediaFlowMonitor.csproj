@@ -11,7 +11,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Zero overhead: self-contained trimmed, fără runtime greu -->
     <PublishReadyToRun>true</PublishReadyToRun>
-    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Unpackaged (fără MSIX) — cerut explicit: .exe standalone, nu instalare din Store/App Installer. -->
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- WindowsAppSDK self-contained NU acceptă AnyCPU — trebuie o platformă
+         concretă declarată aici, plus -p:Platform=x64 dat explicit la publish
+         (vezi scripts/build-windows-exe.ps1). -->
+    <Platforms>x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
