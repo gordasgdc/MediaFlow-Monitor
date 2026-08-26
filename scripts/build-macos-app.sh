@@ -21,6 +21,14 @@ echo "→ Asamblare $APP_NAME…"
 rm -rf "$APP_PATH"
 mkdir -p "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
 
+# Build number (CFBundleVersion) — incrementat automat la fiecare build,
+# distinct de versiunea semantică (CFBundleShortVersionString), afișat în
+# fereastra About ("v1.3.2 (build 7)").
+CURRENT_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PKG_DIR/Resources/Info.plist" 2>/dev/null || echo 0)
+NEXT_BUILD=$((CURRENT_BUILD + 1))
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT_BUILD" "$PKG_DIR/Resources/Info.plist"
+echo "→ Build number: $NEXT_BUILD"
+
 cp "$BIN_PATH" "$APP_PATH/Contents/MacOS/MediaFlowMonitor"
 cp "$PKG_DIR/Resources/Info.plist" "$APP_PATH/Contents/Info.plist"
 
