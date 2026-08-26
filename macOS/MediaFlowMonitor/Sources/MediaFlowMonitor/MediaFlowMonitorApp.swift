@@ -8,6 +8,22 @@ struct MediaFlowMonitorApp: App {
     var body: some Scene {
         // Fără WindowGroup vizibil — totul e gestionat de AppDelegate/OverlayWindowController.
         Settings { EmptyView() }
+            .commands {
+                // Meniul nativ de sus (vizibil cât timp aplicația e activă,
+                // ex. când Dashboard-ul e deschis) — About în meniul de
+                // aplicație, Ghidul de utilizare în meniul Help, ca orice
+                // aplicație macOS standard.
+                CommandGroup(replacing: .appInfo) {
+                    Button("Despre MediaFlow Monitor") {
+                        (NSApp.delegate as? AppDelegate)?.showAbout()
+                    }
+                }
+                CommandGroup(replacing: .help) {
+                    Button("Ghid de utilizare (User Manual)") {
+                        (NSApp.delegate as? AppDelegate)?.showUserGuide()
+                    }
+                }
+            }
     }
 }
 
@@ -58,6 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Machine ID: \(license.machineIDDisplay)", action: #selector(copyMachineID), keyEquivalent: "")
         menu.addItem(withTitle: "Activează licența (WhatsApp)…", action: #selector(openWhatsAppActivation), keyEquivalent: "")
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Ghid de utilizare (Help)…", action: #selector(showUserGuideMenuAction), keyEquivalent: "")
+        menu.addItem(withTitle: "Despre MediaFlow Monitor…", action: #selector(showAboutMenuAction), keyEquivalent: "")
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Versiune \(appVersion())", action: nil, keyEquivalent: "")
         menu.addItem(withTitle: "Caută actualizări…", action: #selector(checkForUpdates), keyEquivalent: "")
         menu.addItem(.separator())
@@ -92,6 +111,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func checkForUpdates() {
         UpdateChecker.shared.checkManually()
+    }
+
+    @objc private func showUserGuideMenuAction() { showUserGuide() }
+    @objc private func showAboutMenuAction() { showAbout() }
+
+    /// Apelat și din meniul nativ de sus (App menu → Despre), vezi
+    /// `MediaFlowMonitorApp.commands`.
+    func showAbout() {
+        AuxWindowPresenter.present(
+            id: "about", title: "Despre MediaFlow Monitor", size: NSSize(width: 340, height: 400)
+        ) {
+            AboutView(license: self.license)
+        }
+    }
+
+    /// Apelat și din meniul nativ de sus (Help → Ghid de utilizare).
+    func showUserGuide() {
+        AuxWindowPresenter.present(
+            id: "userGuide", title: "Ghid de utilizare — MediaFlow Monitor", size: NSSize(width: 620, height: 560)
+        ) {
+            UserGuideView()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
