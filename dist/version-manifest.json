@@ -1,19 +1,19 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.6.0",
+  "latestVersion": "1.7.0",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.6.0: BUG FIX critic Licentiere - butonul de activare exista din v1.0 dar nu era conectat la nimic; adaugat Introdu codul de activare... in meniul din bara de sus, cu mesaje clare de eroare (cod invalid/gresit produs/gresita masina/expirat).",
+  "releaseNotes": "v1.7.0: Top RAM/Swap Consumers in System Health, Log Decoder Pro (filtre Errors/Warnings/Render Events, Pause/Resume, Export Log, highlight cuvinte cheie), Open Cache Folder, Copy Diagnostics, Force Close Hanging DaVinci, alerte native (swap ridicat, disk cache scazut).",
   "platforms": {
     "macos": {
-      "version": "1.6.0",
-      "packageUrl": "dist/MediaFlowMonitor-1.6.0.pkg",
-      "sha256": "cd682a9339fd7ff82da1e0fd7db082b20db0421172cf626cdd2b8c50d8a2afd1"
+      "version": "1.7.0",
+      "packageUrl": "dist/MediaFlowMonitor-1.7.0.pkg",
+      "sha256": "2ebf9d40a38f8b634b9211428323ebf6b33c22d6ff7bf248cebe1007b4982d73"
     },
     "windows": {
-      "version": "1.6.0",
-      "packageUrl": "dist/MediaFlowMonitorSetup-x64-1.6.0.exe",
-      "sha256": "dd7841845339d1bca464abb517efed51d50da2434d50bbe2b3ed2bf64e18fdc4",
+      "version": "1.7.0",
+      "packageUrl": "dist/MediaFlowMonitorSetup-x64-1.7.0.exe",
+      "sha256": "7c35a351ea692fa80337e9e4bb13d1f8ad7f5aa23eb08ef11761bc0c4b651820",
       "packageUrlArm64": "dist/MediaFlowMonitorSetup-arm64-1.6.0.exe",
       "sha256Arm64": "4441981c364d3348862f1ef19730e20ec3fd226476393be6c38d7691fe4f22d2"
     }
