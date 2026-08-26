@@ -52,22 +52,28 @@ public sealed class DaVinciLogWatcher : IDisposable
         _watcher = null;
     }
 
-    public void Dispose() => Stop();
-
-    private string? FindLatestLogFile()
+    /// Forțează o recitire imediată ("Force Sync Log") — echivalentul
+    /// `forceSync()` de pe Mac: dacă fișierul curent e mai mic decât ce
+    /// știam (rotație de log), reia offset-ul de la 0.
+    public void ForceSync()
     {
-        var files = Directory.GetFiles(_logDirectory, "*.log");
-        return files.Length == 0 ? null : files[Array.IndexOf(files, files.MaxBy(File.GetLastWriteTimeUtc))];
+        var latest = FindLatestLogFile();
+        if (latest == null) return;
+        if (latest != _activeLogPath)
+        {
+            _activeLogPath = latest;
+            _lastOffset = 0;
+        }
+        var currentSize = new FileInfo(latest).Length;
+        if (currentSize < _lastOffset) _lastOffset = 0;
+        ReadNewLines(latest);
     }
 
-    private void OnLogChanged(object sender, FileSystemEventArgs e)
+    private void ReadNewLines(string path)
     {
-        if (_activeLogPath == null) _activeLogPath = e.FullPath;
-        if (e.FullPath != _activeLogPath) return;
-
         try
         {
-            using var stream = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             stream.Seek(_lastOffset, SeekOrigin.Begin);
             using var reader = new StreamReader(stream);
             string? line;
@@ -80,8 +86,23 @@ public sealed class DaVinciLogWatcher : IDisposable
         }
         catch (IOException)
         {
-            // fișierul poate fi blocat momentan de Resolve — reîncercăm la următorul eveniment
+            // fișierul poate fi blocat momentan de Resolve — reîncercăm la următorul eveniment/apel
         }
+    }
+
+    public void Dispose() => Stop();
+
+    private string? FindLatestLogFile()
+    {
+        var files = Directory.GetFiles(_logDirectory, "*.log");
+        return files.Length == 0 ? null : files[Array.IndexOf(files, files.MaxBy(File.GetLastWriteTimeUtc))];
+    }
+
+    private void OnLogChanged(object sender, FileSystemEventArgs e)
+    {
+        if (_activeLogPath == null) _activeLogPath = e.FullPath;
+        if (e.FullPath != _activeLogPath) return;
+        ReadNewLines(e.FullPath);
     }
 
     internal static ResolveLogSignal? Parse(string line)

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 namespace MediaFlowMonitor.SystemMetrics;
@@ -8,14 +10,20 @@ public enum MetricLevel { Ok, Warning, Critical }
 
 public readonly record struct MemorySnapshot(
     double RamUsedGB, double RamTotalGB,
-    double SwapUsedGB, MetricLevel SwapLevel);
+    double SwapUsedGB, MetricLevel SwapLevel,
+    double? VramUsedGB, double[] CpuPerCore);
 
-/// Citește RAM/Swap via PerformanceCounters (nativ, fără WMI — WMI e mult mai
-/// costisitor per query). VRAM rămâne TODO (necesită vendor API: NVML/ADL).
+/// Citește RAM/Swap via PerformanceCounters, VRAM prin WMI (best-effort —
+/// Win32_VideoController.AdapterRAM e cunoscut plafonat la ~4GB pe unele
+/// drivere/OS-uri, exact ca IOKit-ul de pe Mac, degradează la null dacă nu
+/// se poate citi), CPU per-core prin PerformanceCounter pe fiecare instanță
+/// "Processor" (nu "Processor Information", identic ca semantică cu
+/// host_processor_info de pe Mac).
 public sealed class SystemMetricsMonitor : IDisposable
 {
     private PerformanceCounter? _committedBytesCounter;
-    private PerformanceCounter? _commitLimitCounter;
+    private List<PerformanceCounter>? _coreCounters;
+    private List<PerformanceCounter>? _vramUsageCounters;
     private Timer? _timer;
     private double _lastSwapUsed;
 
@@ -28,7 +36,33 @@ public sealed class SystemMetricsMonitor : IDisposable
     public void Start()
     {
         _committedBytesCounter = new PerformanceCounter("Memory", "Committed Bytes");
-        _commitLimitCounter = new PerformanceCounter("Memory", "Commit Limit");
+
+        var cat = new PerformanceCounterCategory("Processor");
+        _coreCounters = cat.GetInstanceNames()
+            .Where(n => n != "_Total")
+            .OrderBy(n => int.TryParse(n, out var i) ? i : int.MaxValue)
+            .Select(n => new PerformanceCounter("Processor", "% Processor Time", n))
+            .ToList();
+        // prima citire pe un PerformanceCounter de tip "% ..." e mereu 0 —
+        // "amorsăm" contorul, la fel ca CPUMonitor.perCoreUsage() (delta) pe Mac.
+        foreach (var c in _coreCounters) c.NextValue();
+
+        // "GPU Adapter Memory" — categorie de contoare built-in din DXGI
+        // (Windows 10 1903+), disponibilă fără niciun SDK de vendor
+        // (NVML/ADL). "Dedicated Usage" per instanță = VRAM chiar folosit
+        // acum, mult mai fiabil decât Win32_VideoController.AdapterRAM
+        // (cunoscut plafonat la ~4GB pe multe drivere moderne).
+        try
+        {
+            if (PerformanceCounterCategory.Exists("GPU Adapter Memory"))
+            {
+                var gpuCat = new PerformanceCounterCategory("GPU Adapter Memory");
+                _vramUsageCounters = gpuCat.GetInstanceNames()
+                    .Select(n => new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", n))
+                    .ToList();
+            }
+        }
+        catch { _vramUsageCounters = null; }
 
         _timer = new Timer(_ => Tick(), null, TimeSpan.Zero, IsTimelineActive ? _activeInterval : _idleInterval);
     }
@@ -37,24 +71,28 @@ public sealed class SystemMetricsMonitor : IDisposable
     {
         _timer?.Dispose();
         _committedBytesCounter?.Dispose();
-        _commitLimitCounter?.Dispose();
+        _coreCounters?.ForEach(c => c.Dispose());
+        _vramUsageCounters?.ForEach(c => c.Dispose());
     }
 
     public void Dispose() => Stop();
 
     private void Tick()
     {
-        if (_committedBytesCounter == null || _commitLimitCounter == null) return;
+        if (_committedBytesCounter == null) return;
 
+        // BUG FIX (2026-08-26): folosea Environment.WorkingSet — memoria
+        // PROCESULUI aplicației, nu RAM-ul de sistem. GC.GetGCMemoryInfo()
+        // dă capacitatea totală corectă; RAM-ul folosit se calculează din
+        // Commit - la fel cum era deja folosit pentru swap, dar corect
+        // separat aici prin "Memory\Available Bytes".
         var gcInfo = GC.GetGCMemoryInfo();
         double ramTotalGB = gcInfo.TotalAvailableMemoryBytes / 1_073_741_824.0;
 
-        using var proc = Process.GetCurrentProcess();
-        double ramUsedGB = Environment.WorkingSet / 1_073_741_824.0;
+        double? availableGB = TryReadAvailableMemoryGB();
+        double ramUsedGB = availableGB.HasValue ? Math.Max(0, ramTotalGB - availableGB.Value) : 0;
 
         double committedGB = _committedBytesCounter.NextValue() / 1_073_741_824.0;
-        double commitLimitGB = _commitLimitCounter.NextValue() / 1_073_741_824.0;
-        // "Swap used" aproximat: commit peste RAM fizică disponibilă
         double swapUsedGB = Math.Max(0, committedGB - ramTotalGB);
         double delta = swapUsedGB - _lastSwapUsed;
         _lastSwapUsed = swapUsedGB;
@@ -63,9 +101,34 @@ public sealed class SystemMetricsMonitor : IDisposable
             : swapUsedGB > 1.0 || delta > 0.1 ? MetricLevel.Warning
             : MetricLevel.Ok;
 
-        SnapshotReady?.Invoke(this, new MemorySnapshot(ramUsedGB, ramTotalGB, swapUsedGB, level));
+        double[] cpuPerCore = _coreCounters?
+            .Select(c => { try { return c.NextValue() / 100.0; } catch { return 0.0; } })
+            .ToArray() ?? Array.Empty<double>();
 
-        // reprogramează intervalul dacă s-a schimbat starea timeline-ului
+        double? vramUsedGB = null;
+        if (_vramUsageCounters is { Count: > 0 })
+        {
+            try
+            {
+                double totalBytes = _vramUsageCounters.Sum(c => c.NextValue());
+                vramUsedGB = totalBytes / 1_073_741_824.0;
+            }
+            catch { vramUsedGB = null; }
+        }
+
+        SnapshotReady?.Invoke(this, new MemorySnapshot(ramUsedGB, ramTotalGB, swapUsedGB, level, vramUsedGB, cpuPerCore));
+
         _timer?.Change(IsTimelineActive ? _activeInterval : _idleInterval, IsTimelineActive ? _activeInterval : _idleInterval);
     }
+
+    private static double? TryReadAvailableMemoryGB()
+    {
+        try
+        {
+            using var counter = new PerformanceCounter("Memory", "Available Bytes");
+            return counter.NextValue() / 1_073_741_824.0;
+        }
+        catch { return null; }
+    }
+
 }
