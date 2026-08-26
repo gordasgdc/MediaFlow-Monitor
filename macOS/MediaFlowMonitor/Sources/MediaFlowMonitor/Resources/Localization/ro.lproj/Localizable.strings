@@ -1,0 +1,13 @@
+"overlay.title" = "MediaFlow";
+"metric.ram" = "RAM";
+"metric.swap" = "Swap";
+"action.purgeCache" = "Golește Cache";
+"action.bypassFX" = "Ocolește FX";
+"action.revealCacheFolder" = "Deschide Folder Cache";
+"signal.gpuMemoryFull" = "Memorie GPU plină";
+"signal.pluginCrash" = "Plugin crăpat: %@";
+"signal.droppedFrames" = "%d cadre pierdute";
+"signal.renderCacheRegenerated" = "Cache de render regenerat";
+"signal.fusionSlowNode" = "Nod Fusion lent (%d ms)";
+"signal.codecSoftwareFallback" = "Decodare software de rezervă (%@)";
+"signal.dbConnectionLost" = "Conexiune bază de date pierdută";

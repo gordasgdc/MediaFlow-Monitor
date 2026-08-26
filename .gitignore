@@ -1,0 +1,13 @@
+# macOS / Swift
+.build/
+.swiftpm/
+*.xcuserstate
+.DS_Store
+
+# Windows / .NET
+bin/
+obj/
+*.user
+
+# Editor
+.vscode/

@@ -1,0 +1,32 @@
+<Window
+    x:Class="MediaFlowMonitor.Overlay.OverlayWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="16" Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+          CornerRadius="16" Width="260">
+        <StackPanel Spacing="14">
+            <Grid>
+                <TextBlock x:Name="TitleText" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <Ellipse x:Name="StatusDot" Width="12" Height="12" HorizontalAlignment="Right" />
+            </Grid>
+
+            <!-- RAM -->
+            <Grid ColumnDefinitions="40,*,Auto">
+                <ProgressRing x:Name="RamRing" Grid.Column="0" Width="36" Height="36" />
+                <TextBlock Grid.Column="1" Text="RAM" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <TextBlock x:Name="RamPercentText" Grid.Column="2" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Swap -->
+            <Grid ColumnDefinitions="40,*,Auto">
+                <ProgressRing x:Name="SwapRing" Grid.Column="0" Width="36" Height="36" />
+                <TextBlock Grid.Column="1" Text="Swap" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <TextBlock x:Name="SwapPercentText" Grid.Column="2" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Action Card -->
+            <Button x:Name="ActionButton" HorizontalAlignment="Stretch" Visibility="Collapsed" Click="OnActionClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

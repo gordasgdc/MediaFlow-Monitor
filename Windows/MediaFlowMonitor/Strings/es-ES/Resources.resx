@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="overlay.title" xml:space="preserve"><value>MediaFlow</value></data>
+  <data name="metric.ram" xml:space="preserve"><value>RAM</value></data>
+  <data name="metric.swap" xml:space="preserve"><value>Swap</value></data>
+  <data name="action.purgeCache" xml:space="preserve"><value>Purgar Caché</value></data>
+  <data name="action.bypassFX" xml:space="preserve"><value>Omitir FX</value></data>
+  <data name="action.revealCacheFolder" xml:space="preserve"><value>Abrir Carpeta de Caché</value></data>
+  <data name="signal.gpuMemoryFull" xml:space="preserve"><value>Memoria GPU llena</value></data>
+  <data name="signal.pluginCrash" xml:space="preserve"><value>Plugin fallido: {0}</value></data>
+  <data name="signal.droppedFrames" xml:space="preserve"><value>{0} fotogramas perdidos</value></data>
+  <data name="signal.renderCacheRegenerated" xml:space="preserve"><value>Caché de render regenerada</value></data>
+  <data name="signal.fusionSlowNode" xml:space="preserve"><value>Nodo Fusion lento ({0} ms)</value></data>
+  <data name="signal.codecSoftwareFallback" xml:space="preserve"><value>Decodificación por software ({0})</value></data>
+  <data name="signal.dbConnectionLost" xml:space="preserve"><value>Conexión a base de datos perdida</value></data>
+</root>
