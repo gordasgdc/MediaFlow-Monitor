@@ -18,20 +18,33 @@ struct DashboardView: View {
         _vm = ObservedObject(wrappedValue: DashboardViewModel(metrics: metrics, logWatcher: logWatcher))
     }
 
+    /// Coloane adaptive: 2 pe lățime confortabilă, colapsează automat la 1
+    /// coloană dacă spațiul scade sub `minimum` — nicio suprapunere posibilă,
+    /// spre deosebire de un HStack rigid cu frame-uri fixe.
+    private let adaptiveColumns = [GridItem(.adaptive(minimum: 280), spacing: 14)]
+
     var body: some View {
-        VStack(spacing: 14) {
-            topBar
-            healthRow
-            performanceSection
-            HStack(alignment: .top, spacing: 14) {
-                logDecoderPanel
-                recommendationsPanel
+        ScrollView {
+            VStack(spacing: 14) {
+                topBar
+                LazyVGrid(columns: adaptiveColumns, spacing: 14) {
+                    healthCard
+                    healthDetailCard
+                }
+                performanceSection
+                LazyVGrid(columns: adaptiveColumns, spacing: 14) {
+                    logDecoderPanel
+                    recommendationsPanel
+                }
+                cacheDiskPanel
+                actionBar
             }
-            cacheDiskPanel
-            actionBar
+            .padding(16)
         }
-        .padding(16)
-        .frame(minWidth: 620, maxWidth: .infinity, minHeight: 560, maxHeight: .infinity)
+        // Limita minimă absolută e impusă și la nivel de NSWindow
+        // (OverlayWindowController.panel.minSize), aici doar oglindim
+        // valoarea ca să conținutul SwiftUI nu se comprime niciodată sub ea.
+        .frame(minWidth: 800, maxWidth: .infinity, minHeight: 650, maxHeight: .infinity)
         .background(.ultraThinMaterial)
         .overlay(alignment: .bottom) { toastView }
         .confirmationDialog(
@@ -118,9 +131,21 @@ struct DashboardView: View {
     // MARK: - Top bar (theme selector)
 
     private var topBar: some View {
-        HStack {
-            Text("MediaFlow Monitor").font(.headline)
-            Spacer()
+        HStack(spacing: 12) {
+            Text("MediaFlow Monitor")
+                .font(.headline)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Spacer(minLength: 12)
+            // BUG FIX: fără `.labelsHidden()`, Picker-ul își desenează
+            // propria etichetă ("Temă") ÎN FAȚA segmentelor — într-un
+            // HStack strâns, acel text se comprimă vertical, literă cu
+            // literă. Eticheta explicită de mai jos înlocuiește eticheta
+            // internă a Picker-ului, cu `.fixedSize()` — nu se mai comprimă.
+            Text("Temă")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: true, vertical: false)
             Picker("Temă", selection: Binding(
                 get: { ThemeManager.shared.current },
                 set: { ThemeManager.shared.set($0) }
@@ -129,37 +154,39 @@ struct DashboardView: View {
                     Text(theme.label).tag(theme)
                 }
             }
+            .labelsHidden()
             .pickerStyle(.segmented)
-            .frame(width: 180)
+            .fixedSize()
         }
     }
 
     // MARK: - System Health
 
-    private var healthRow: some View {
-        HStack(spacing: 14) {
-            card {
-                HStack {
-                    Text("System Health").font(.headline)
-                    Spacer()
-                    Circle().fill(color(for: vm.overallLevel)).frame(width: 10, height: 10)
-                }
-                HStack(spacing: 20) {
-                    metricRing(label: "RAM", value: vm.ramFraction, level: vm.ramLevel)
-                    metricRing(label: "Swap", value: vm.swapFraction, level: vm.swapLevel)
-                }
+    private var healthCard: some View {
+        card {
+            HStack {
+                Text("System Health").font(.headline)
+                Spacer()
+                Circle().fill(color(for: vm.overallLevel)).frame(width: 10, height: 10)
             }
-            card {
-                HStack {
-                    Text("System Health").font(.headline)
-                    Spacer()
-                    Circle().fill(color(for: vm.overallLevel)).frame(width: 10, height: 10)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    detailRow(icon: "cpu", label: "VRAM", value: vm.vramUsedGB.map { String(format: "%.1f GB", $0) } ?? "—")
-                    detailRow(icon: "internaldrive", label: "Partition", value: vm.diskInfo.map { String(format: "%.0f GB", $0.totalGB) } ?? "—")
-                    detailRow(icon: "circle.fill", label: "CacheClip disk", value: vm.diskInfo.map { String(format: "%.0f GB liber", $0.freeGB) } ?? "—", dotColor: diskDotColor)
-                }
+            HStack(spacing: 20) {
+                metricRing(label: "RAM", value: vm.ramFraction, level: vm.ramLevel)
+                metricRing(label: "Swap", value: vm.swapFraction, level: vm.swapLevel)
+            }
+        }
+    }
+
+    private var healthDetailCard: some View {
+        card {
+            HStack {
+                Text("System Health").font(.headline)
+                Spacer()
+                Circle().fill(color(for: vm.overallLevel)).frame(width: 10, height: 10)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                detailRow(icon: "cpu", label: "VRAM", value: vm.vramUsedGB.map { String(format: "%.1f GB", $0) } ?? "—")
+                detailRow(icon: "internaldrive", label: "Partition", value: vm.diskInfo.map { String(format: "%.0f GB", $0.totalGB) } ?? "—")
+                detailRow(icon: "circle.fill", label: "CacheClip disk", value: vm.diskInfo.map { String(format: "%.0f GB liber", $0.freeGB) } ?? "—", dotColor: diskDotColor)
             }
         }
     }
@@ -176,7 +203,7 @@ struct DashboardView: View {
     private var performanceSection: some View {
         card {
             Text("DaVinci Resolve — Real-time Performance & Log Stream").font(.headline)
-            HStack(spacing: 16) {
+            LazyVGrid(columns: adaptiveColumns, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("VRAM / Swap Utilization (MB)").font(.caption).foregroundStyle(.secondary)
                     Chart {
@@ -191,6 +218,7 @@ struct DashboardView: View {
                     }
                     .chartXAxis(.hidden)
                     .frame(height: 130)
+                    .frame(maxWidth: .infinity)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("CPU Thread 1–\(max(vm.cpuPerCore.count, 1))").font(.caption).foregroundStyle(.secondary)
@@ -202,6 +230,7 @@ struct DashboardView: View {
                     }
                     .chartYScale(domain: 0...100)
                     .frame(height: 130)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -250,7 +279,7 @@ struct DashboardView: View {
                 }
             }
         }
-        .frame(width: 260, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     // MARK: - Cache disk detail
@@ -304,26 +333,42 @@ struct DashboardView: View {
     // MARK: - Action bar
 
     private var actionBar: some View {
-        HStack {
-            actionButton(title: "Purge Cache", running: .purgeCache, runningTitle: "Purging…") {
-                showPurgeConfirm = true
+        // ViewThatFits: încearcă întâi rândul unic; dacă nu încape (fereastră
+        // apropiată de minSize, multe butoane simultan), trece la 2 rânduri
+        // în loc să comprime/suprapună butoanele.
+        ViewThatFits(in: .horizontal) {
+            HStack { actionButtons; Spacer(minLength: 8); trailingActionInfo }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack { actionButtons; Spacer(minLength: 0) }
+                HStack { trailingActionInfo }
             }
-            actionButton(title: "Force Sync Log", running: .forceSyncLog, runningTitle: "Syncing…") {
-                vm.forceSyncLog()
-            }
-            actionButton(title: "Optimise System", running: .optimiseSystem, runningTitle: "Optimising…") {
-                vm.optimiseSystem()
-            }
-            if vm.runningAction != nil {
-                Button("Vezi log") { vm.showActionConsole = true }
-                    .buttonStyle(.link).font(.caption)
-            }
-            Spacer()
-            if let message = vm.lastActionMessage, vm.runningAction == nil {
-                Text(message).font(.caption).foregroundStyle(.secondary)
-            }
-            Button("Close Panel") { NSApp.keyWindow?.orderOut(nil) }
         }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        actionButton(title: "Purge Cache", running: .purgeCache, runningTitle: "Purging…") {
+            showPurgeConfirm = true
+        }
+        actionButton(title: "Force Sync Log", running: .forceSyncLog, runningTitle: "Syncing…") {
+            vm.forceSyncLog()
+        }
+        actionButton(title: "Optimise System", running: .optimiseSystem, runningTitle: "Optimising…") {
+            vm.optimiseSystem()
+        }
+        if vm.runningAction != nil {
+            Button("Vezi log") { vm.showActionConsole = true }
+                .buttonStyle(.link).font(.caption)
+        }
+    }
+
+    @ViewBuilder
+    private var trailingActionInfo: some View {
+        if let message = vm.lastActionMessage, vm.runningAction == nil {
+            Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        }
+        Spacer(minLength: 8)
+        Button("Close Panel") { NSApp.keyWindow?.orderOut(nil) }
     }
 
     @ViewBuilder
