@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update \u2014 canal PRIVAT, f\u0103r\u0103 server real. Consumat local de aplica\u021bie pentru a compara versiunea instalat\u0103 cu cea din pachetul curent de test.",
   "channel": "private-test",
-  "latestVersion": "1.0.1",
-  "minSupportedVersion": "1.0.1",
-  "releaseNotes": "v1.0.1: fix critic \u2014 aplica\u021bia era terminat\u0103 automat de macOS (Automatic Termination) f\u0103r\u0103 feedback vizual; ad\u0103ugat status item permanent \u00een menu bar + overlay afi\u0219at la prima lansare; manifest GDC \u00eencapsulat \u00een bundle (nu mai st\u0103 liber \u00een zip).",
+  "latestVersion": "1.1.0",
+  "minSupportedVersion": "1.0.0",
+  "releaseNotes": "v1.1.0: licentiere (trial 15 zile + activare WhatsApp + Ed25519 identic ecosistemului GDC), Update Checker cu popup, VRAM (IOKit), toate cele 7 semnale DaVinci vizibile in panou, alerta spatiu disc CacheClip, semnare reala pregatita (APPLE_SIGN_IDENTITY_APP).",
   "platforms": {
     "macos": {
-      "version": "1.0.1",
-      "packageUrl": "dist/MediaFlowMonitor-macOS-1.0.1.zip",
-      "sha256": "50253b6b8904fd9f0199621269fc0f7f91a2e5f2416ee6b4bf8b9928b1e7988d"
+      "version": "1.1.0",
+      "packageUrl": "dist/MediaFlowMonitor-macOS-1.1.0.zip",
+      "sha256": "0a503930f3b4c08dfd0b1d7a6d986e4381aa40d82a073a9b59d45cc9bfd56bf4"
     },
     "windows": {
       "version": "1.0.0",

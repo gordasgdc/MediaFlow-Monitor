@@ -46,8 +46,13 @@ rm -rf "$ICONSET_TMP"
 /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist"
 
-echo "→ Semnare ad-hoc (fără notarization, conform fazei curente)…"
-codesign --force --deep -s - "$APP_PATH"
+if [ -n "${APPLE_SIGN_IDENTITY_APP:-}" ]; then
+  echo "→ Semnare + notarizare oficială (APPLE_SIGN_IDENTITY_APP setată)…"
+  "$PKG_DIR/codesigning/sign-and-notarize.sh" app "$APP_PATH"
+else
+  echo "→ Semnare ad-hoc (fără notarization — setează APPLE_SIGN_IDENTITY_APP pentru semnare reală)…"
+  codesign --force --deep -s - "$APP_PATH"
+fi
 
 echo "→ Împachetare arhivă privată de test (dist/)…"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist")
@@ -59,7 +64,13 @@ STAGE="$BUILD_OUT/_staging"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -R "$APP_PATH" "$STAGE/"
-# NIMIC în afara .app — manifestul GDC e deja încapsulat în Contents/Resources/GDC/
+# Regula 6 — arhivă cu STRICT 3 fișiere la rădăcină: .app, uninstaller, PDF.
+cp "$PKG_DIR/Dezinstalare_MediaFlowMonitor.command" "$STAGE/"
+if [ -f "$ROOT/installer/Instructiuni_Utilizare.pdf" ]; then
+  cp "$ROOT/installer/Instructiuni_Utilizare.pdf" "$STAGE/"
+else
+  echo "→ ⚠️  PDF lipsă — rulează 'python3 installer/generate_pdf.py' înainte de release."
+fi
 (cd "$STAGE" && zip -qr "$DIST_DIR/$ZIP_NAME" .)
 rm -rf "$STAGE"
 
@@ -74,5 +85,5 @@ p.write_text(json.dumps(d, indent=2) + '\n')
 
 echo ""
 echo "✅ Gata: $APP_PATH (v$VERSION)"
-echo "   Arhivă privată: $DIST_DIR/$ZIP_NAME (sha256: $SHA256) — conține DOAR .app"
+echo "   Arhivă privată: $DIST_DIR/$ZIP_NAME (sha256: $SHA256) — .app + uninstaller + PDF (Regula 6)"
 echo "   Deschide .app cu dublu-click din Finder, apoi testează Cmd+Shift+M."
