@@ -12,6 +12,25 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Proj = Join-Path $Root "Windows\MediaFlowMonitor\MediaFlowMonitor.csproj"
 $Out  = Join-Path $Root "Publish\Windows"
 
+# KNOWN ISSUE (real, hit and fixed 2026-08-26): building this WinUI3
+# project with the standalone `dotnet` CLI fails with:
+#   MSB4062: The "Microsoft.Build.Packaging.Pri.Tasks.ExpandPriContent"
+#   task could not be loaded from ...\dotnet\sdk\<ver>\Microsoft\
+#   VisualStudio\v<ver>\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll
+# That DLL ships ONLY with Visual Studio's "WinUI application development"
+# workload, at a DIFFERENT path (...\Microsoft Visual Studio\<ver>\
+# Community\MSBuild\...\AppxPackage\), and the dotnet SDK's own targets
+# expect it colocated with the SDK. Fix (one-time, Admin PowerShell):
+#   $src = "C:\Program Files\Microsoft Visual Studio\<VS-ver>\Community\MSBuild\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
+#   $dst = "C:\Program Files\dotnet\sdk\<SDK-ver>\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
+#   New-Item -ItemType Directory -Force -Path $dst | Out-Null
+#   Copy-Item "$src\*" $dst -Recurse -Force
+# (adjust <VS-ver>/<SDK-ver> to what `dotnet --version` / VS Installer show)
+$PriTaskProbe = Get-ChildItem -Path "C:\Program Files\dotnet\sdk" -Filter "Microsoft.Build.Packaging.Pri.Tasks.dll" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $PriTaskProbe) {
+    Write-Warning "Microsoft.Build.Packaging.Pri.Tasks.dll not found under the dotnet SDK folder - the build below will likely fail with MSB4062. See the comment block above this line for the one-time Admin PowerShell fix."
+}
+
 Write-Host "-> dotnet publish (Release, self-contained, win-x64)..."
 # -p:Platform=x64 is REQUIRED here - without it the csproj defaults to
 # AnyCPU, and WindowsAppSDK.SelfContained.targets refuses to publish
