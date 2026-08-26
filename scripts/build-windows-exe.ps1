@@ -73,18 +73,25 @@ Write-Host "Private archive: $ZipPath (sha256: $Sha256)"
 # --- Installer nativ (Inno Setup) ---
 # winget instaleaza Inno Setup per-user, sub %LocalAppData%\Programs pe
 # multe masini (nu Program Files) - verificat live 2026-08-26.
-$Iscc = Get-Command "iscc.exe" -ErrorAction SilentlyContinue
-if (-not $Iscc) {
+# BUG FIX (2026-08-26): Get-Command intoarce un CommandInfo (are .Source),
+# dar Get-Item intoarce un FileInfo (are .FullName, NU .Source) - amestecul
+# celor doua tipuri in aceeasi variabila facea "& $Iscc.Source" sa fie null
+# cand ISCC venea din calea de fallback, nu din PATH. Fix: normalizam
+# mereu la un simplu string de cale.
+$IsccPath = $null
+$FromPath = Get-Command "iscc.exe" -ErrorAction SilentlyContinue
+if ($FromPath) { $IsccPath = $FromPath.Source }
+if (-not $IsccPath) {
     $CandidatePaths = @(
         "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
         "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
         "$env:LocalAppData\Programs\Inno Setup 6\ISCC.exe"
     )
     foreach ($p in $CandidatePaths) {
-        if (Test-Path $p) { $Iscc = Get-Item $p; break }
+        if (Test-Path $p) { $IsccPath = $p; break }
     }
 }
-if (-not $Iscc) {
+if (-not $IsccPath) {
     Write-Host ""
     Write-Host "SKIP: ISCC.exe (Inno Setup Compiler) not found."
     Write-Host "Install it free from https://jrsoftware.org/isdl.php, then re-run this script"
@@ -92,9 +99,9 @@ if (-not $Iscc) {
     exit 0
 }
 
-Write-Host "-> Building installer (Inno Setup, $Arch)..."
+Write-Host "-> Building installer (Inno Setup, $Arch)... [$IsccPath]"
 $IssPath = Join-Path $Root "Windows\installer.iss"
-& $Iscc.Source "/DMyAppArch=$Arch" "/DMyAppVersion=$Version" $IssPath
+& $IsccPath "/DMyAppArch=$Arch" "/DMyAppVersion=$Version" $IssPath
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Inno Setup compilation failed (exit code $LASTEXITCODE)."
     exit 1
