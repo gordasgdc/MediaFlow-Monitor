@@ -24,11 +24,16 @@ final class LicenseManager: ObservableObject {
             defaults.set(Date(), forKey: firstLaunchKey)
         }
         refresh()
+        Task {
+            await RevocationCheck.shared.refresh(productIDs: [Self.productID])
+            refresh() // reia decizia locală dacă revocarea tocmai a sosit online
+        }
     }
 
     func refresh() {
         if let serial = defaults.string(forKey: serialKey),
-           case .success(let payload) = LicenseCore.validate(serial: serial, expectedProductID: Self.productID) {
+           case .success(let payload) = LicenseCore.validate(serial: serial, expectedProductID: Self.productID),
+           !RevocationCheck.shared.isRevoked(Self.productID) {
             state = .licensed(expiresAt: payload.expiresAt)
             return
         }
