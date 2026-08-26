@@ -13,6 +13,8 @@ struct MemorySnapshot: Equatable {
     let swapLevel: MetricLevel
     let vramUsedGB: Double?
     let cpuPerCore: [Double]
+    let topRamProcesses: [ProcessUsage]
+    let topSwapProcesses: [ProcessUsage]
 }
 
 /// Citește RAM + Swap + (opțional) VRAM la interval adaptiv, fără polling agresiv.
@@ -53,11 +55,14 @@ final class SystemMetrics {
         else if swap > 1.0 || swapDelta > 0.1 { level = .warning }
         else { level = .ok }
 
+        let (topRam, topSwapActivity) = ProcessInspector.topProcesses()
         snapshotPublisher.send(MemorySnapshot(
             ramUsedGB: ram.used, ramTotalGB: ram.total,
             swapUsedGB: swap, swapLevel: level,
             vramUsedGB: VRAMProbe.readUsedGB(),
-            cpuPerCore: CPUMonitor.perCoreUsage()
+            cpuPerCore: CPUMonitor.perCoreUsage(),
+            topRamProcesses: topRam,
+            topSwapProcesses: topSwapActivity
         ))
     }
 

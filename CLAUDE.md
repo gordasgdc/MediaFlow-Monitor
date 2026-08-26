@@ -346,3 +346,22 @@ GDC viitoare (Mac și, unde tehnologia o permite, Windows):
   Base32, sign+verify cu cheie de test, rejecție la tamper, încărcare cheie
   publică GDC reală — toate au trecut. Rămâne necesar un test complet
   `dotnet build`/`dotnet run` în Parallels înainte de orice release Windows.
+- **2026-08-26 — v1.7.0: Top RAM/Swap Consumers, Log Decoder Pro (filtre/
+  pauză/export/highlight), Open Cache Folder, Copy Diagnostics, Force Close
+  Hanging DaVinci, System Banners.** Onest despre o asimetrie reală de
+  platformă: Windows are date REALE de swap per proces
+  (`Process.PagedMemorySize64` — vezi `ProcessInspector.cs`), Mac NU expune
+  public așa ceva (nici Activity Monitor n-o face) — lista de pe Mac
+  (`ProcessInspector.swift`) e etichetată explicit "Top Swap Activity" și
+  clasează procesele după page-in-uri recente (proxy onest), nu octeți
+  static de swap. "Zombie DaVinci" detectat euristic identic pe ambele
+  platforme: proces "Resolve" găsit activ ȘI fără nicio fereastră vizibilă
+  (`NSWorkspace`/`Process.MainWindowHandle`). System Banners native prin
+  `UNUserNotificationCenter` (Mac) / `NotifyIcon.ShowBalloonTip` (Windows),
+  trimise o singură dată per depășire de prag (swap >80%, disk cache <10GB).
+  **Verificare reală făcută**: `swift build` complet, curat, pe Mac. Codul
+  C#/WPF (`ProcessInspector.cs`, extensiile la `DashboardViewModel.cs`/
+  `OverlayWindow.xaml(.cs)`/`Converters.cs`) e revizuit manual, NU compilat
+  real — `dotnet build net8.0-windows` tot nu rulează pe Mac (vezi limitarea
+  documentată mai sus). Necesar `dotnet build` + test complet în Parallels
+  înainte de orice release.

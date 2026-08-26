@@ -1,11 +1,23 @@
+import AppKit
 import Combine
 import Foundation
+import UserNotifications
+
+/// Nivel de filtrare a consolei "Real-time Log Decoder".
+enum LogFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case errors = "Errors"
+    case warnings = "Warnings"
+    case renderEvents = "Render Events"
+    var id: String { rawValue }
+}
 
 struct LogConsoleEntry: Identifiable {
     let id = UUID()
     let date: Date
     let text: String
     let level: MetricLevel
+    let isRenderEvent: Bool
 }
 
 struct Recommendation: Identifiable {
@@ -31,7 +43,7 @@ struct ActionLogEntry: Identifiable {
 /// Ce buton de acțiune rulează în acest moment — controlează spinner-ul
 /// și textul butonului respectiv ("Purging…" etc.).
 enum RunningAction: Equatable {
-    case purgeCache, forceSyncLog, optimiseSystem
+    case purgeCache, forceSyncLog, optimiseSystem, forceKillDaVinci
 }
 
 struct SuggestedAction: Identifiable {
@@ -52,9 +64,35 @@ final class DashboardViewModel: ObservableObject {
     @Published var overallLevel: MetricLevel = .ok
     @Published var vramUsedGB: Double?
     @Published var cpuPerCore: [Double] = []
+    @Published var topRamProcesses: [ProcessUsage] = []
+    @Published var topSwapProcesses: [ProcessUsage] = []
 
     @Published var diskInfo: DiskInfo?
     @Published var cachePathIsManual: Bool = false
+
+    // Log Decoder — filtre, freeze, export.
+    @Published var logFilter: LogFilter = .all
+    @Published var isLogPaused: Bool = false
+    private var pausedLogBuffer: [LogConsoleEntry] = []
+
+    var filteredLogConsole: [LogConsoleEntry] {
+        switch logFilter {
+        case .all: return logConsole
+        case .errors: return logConsole.filter { $0.level == .critical }
+        case .warnings: return logConsole.filter { $0.level == .warning }
+        case .renderEvents: return logConsole.filter { $0.isRenderEvent }
+        }
+    }
+
+    var errorCount: Int { logConsole.filter { $0.level == .critical }.count }
+    var warningCount: Int { logConsole.filter { $0.level == .warning }.count }
+
+    // Zombie DaVinci Resolve.
+    @Published var hangingDaVinciDetected: Bool = false
+
+    // Alerte native (System Banners) — trimise o singură dată per prag depășit.
+    private var swapBannerSent = false
+    private var diskBannerSent = false
 
     @Published var vramHistory: [HistoryPoint] = []
     @Published var swapHistory: [HistoryPoint] = []
@@ -99,14 +137,45 @@ final class DashboardViewModel: ObservableObject {
 
         cachePathIsManual = CacheFolderLocator.isManualOverride
         checkDisk()
+        checkHangingDaVinci()
         diskCheckTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.checkDisk()
+            self?.checkHangingDaVinci()
         }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     private func checkDisk() {
         diskInfo = CacheFolderLocator.diskInfo()
+        if let disk = diskInfo {
+            if disk.freeGB < 10 {
+                sendBanner(id: "disk-low", title: "CacheClip disk aproape plin", body: String(format: "Doar %.1f GB liberi — golește cache-ul cât mai curând.", disk.freeGB), once: &diskBannerSent)
+            } else {
+                diskBannerSent = false
+            }
+        }
         updateRecommendations()
+    }
+
+    /// Verifică dacă procesul DaVinci Resolve a rămas agățat: găsit ca
+    /// proces activ (`ProcessInspector`), dar NU mai apare ca aplicație
+    /// lansată normal (Dock/Cmd+Tab) — semn clar că userul a "închis-o", dar
+    /// procesul (sau un helper al lui) a rămas în memorie.
+    private func checkHangingDaVinci() {
+        let pids = ProcessInspector.davinciProcessPIDs()
+        hangingDaVinciDetected = !pids.isEmpty && !ProcessInspector.isDaVinciResolveAppVisible()
+        updateRecommendations()
+    }
+
+    private func sendBanner(id: String, title: String, body: String, once flag: inout Bool) {
+        guard !flag else { return }
+        flag = true
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     private func apply(_ snapshot: MemorySnapshot) {
@@ -114,6 +183,8 @@ final class DashboardViewModel: ObservableObject {
         swapFraction = min(snapshot.swapUsedGB / 8.0, 1)
         vramUsedGB = snapshot.vramUsedGB
         cpuPerCore = snapshot.cpuPerCore
+        topRamProcesses = snapshot.topRamProcesses
+        topSwapProcesses = snapshot.topSwapProcesses
         swapLevel = snapshot.swapLevel
         ramLevel = ramFraction > 0.9 ? .critical : (ramFraction > 0.75 ? .warning : .ok)
         overallLevel = [ramLevel, swapLevel].contains(.critical) ? .critical
@@ -133,32 +204,135 @@ final class DashboardViewModel: ObservableObject {
         if swapLevel == .critical {
             suggestedAction = SuggestedAction(title: "Purge Cache", icon: "trash.circle", kind: .purgeCache)
         }
+        if swapFraction > 0.8 {
+            sendBanner(id: "swap-high", title: "Swap sistem ridicat", body: String(format: "Swap la %.0f%% — editorul poate deveni lent.", swapFraction * 100), once: &swapBannerSent)
+        } else {
+            swapBannerSent = false
+        }
         updateRecommendations()
     }
 
     private func apply(_ signal: ResolveLogSignal) {
-        let (text, level): (String, MetricLevel)
+        let (text, level, isRenderEvent): (String, MetricLevel, Bool)
         switch signal {
-        case .pluginCrash(let name): (text, level) = ("Plugin crashed: \(name)", .critical)
+        case .pluginCrash(let name): (text, level, isRenderEvent) = ("Plugin crashed: \(name)", .critical, false)
         case .gpuMemoryFull:
-            (text, level) = ("GPU Memory Full", .critical)
+            (text, level, isRenderEvent) = ("GPU Memory Full", .critical, true)
             suggestedAction = SuggestedAction(title: "Bypass FX", icon: "bolt.slash.circle", kind: .bypassFX)
-        case .droppedFrames(let count): (text, level) = ("Timeline dropped frame (\(count))", .warning)
+        case .droppedFrames(let count): (text, level, isRenderEvent) = ("Timeline dropped frame (\(count))", .warning, true)
         case .renderCacheRegenerated:
-            (text, level) = ("Render Cache invalid — regenerated", .warning)
+            (text, level, isRenderEvent) = ("Render Cache invalid — regenerated", .warning, true)
             suggestedAction = SuggestedAction(title: "Purge Cache", icon: "trash.circle", kind: .purgeCache)
         case .fusionSlowNode(let ms):
-            (text, level) = ("Fusion composition slow rendering (\(ms)ms)", .warning)
+            (text, level, isRenderEvent) = ("Fusion composition slow rendering (\(ms)ms)", .warning, true)
             suggestedAction = SuggestedAction(title: "Bypass FX", icon: "bolt.slash.circle", kind: .bypassFX)
-        case .codecSoftwareFallback: (text, level) = ("Codec fallback to software decode", .warning)
-        case .dbConnectionLost: (text, level) = ("Database connection lost", .critical)
+        case .codecSoftwareFallback: (text, level, isRenderEvent) = ("Codec fallback to software decode", .warning, false)
+        case .dbConnectionLost: (text, level, isRenderEvent) = ("Database connection lost", .critical, false)
         }
 
-        logConsole.insert(LogConsoleEntry(date: Date(), text: text, level: level), at: 0)
-        if logConsole.count > Self.maxConsoleLines {
-            logConsole.removeLast(logConsole.count - Self.maxConsoleLines)
+        let entry = LogConsoleEntry(date: Date(), text: text, level: level, isRenderEvent: isRenderEvent)
+        if isLogPaused {
+            pausedLogBuffer.insert(entry, at: 0)
+        } else {
+            logConsole.insert(entry, at: 0)
+            if logConsole.count > Self.maxConsoleLines {
+                logConsole.removeLast(logConsole.count - Self.maxConsoleLines)
+            }
         }
         updateRecommendations()
+    }
+
+    /// Pause/Resume Auto-scroll — cât e pe pauză, evenimentele noi se
+    /// acumulează separat (nu se pierd), și se reinjectează la Resume.
+    func toggleLogPause() {
+        isLogPaused.toggle()
+        if !isLogPaused, !pausedLogBuffer.isEmpty {
+            logConsole.insert(contentsOf: pausedLogBuffer, at: 0)
+            if logConsole.count > Self.maxConsoleLines {
+                logConsole.removeLast(logConsole.count - Self.maxConsoleLines)
+            }
+            pausedLogBuffer.removeAll()
+        }
+    }
+
+    /// Export Log — salvează consola curentă (filtrată după `logFilter`)
+    /// într-un fișier .txt, un singur click, pentru trimis la suport.
+    func exportLog() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "MediaFlowMonitor-Log-\(Int(Date().timeIntervalSince1970)).txt"
+        panel.allowedContentTypes = [.plainText]
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss"
+            let lines = self.filteredLogConsole.reversed().map { entry -> String in
+                let tag = entry.level == .critical ? "ERR" : (entry.level == .warning ? "WARN" : "OK")
+                return "\(formatter.string(from: entry.date)) [\(tag)] \(entry.text)"
+            }
+            try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    // MARK: - Accesorii & utilitare rapide
+
+    func openCacheFolderInFinder() {
+        CacheFolderLocator.revealInFinder()
+    }
+
+    /// Copy Diagnostics — rezumat curat, gata de lipit în WhatsApp/email/forum.
+    func copyDiagnosticsToClipboard() {
+        var lines: [String] = []
+        lines.append("MediaFlow Monitor — Diagnostic")
+        lines.append("macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        lines.append(String(format: "RAM: %.1f%% (nivel %@)", ramFraction * 100, levelText(ramLevel)))
+        lines.append(String(format: "Swap: %.1f%% (nivel %@)", swapFraction * 100, levelText(swapLevel)))
+        lines.append("VRAM: \(vramUsedGB.map { String(format: "%.1f GB", $0) } ?? "necunoscut")")
+        if let disk = diskInfo {
+            lines.append(String(format: "CacheClip disk: %.1f GB liberi din %.0f GB (%@)", disk.freeGB, disk.totalGB, disk.path.path))
+        }
+        let recentErrors = logConsole.filter { $0.level == .critical }.prefix(5)
+        if !recentErrors.isEmpty {
+            lines.append("Ultimele erori din log:")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss"
+            for e in recentErrors { lines.append("  \(formatter.string(from: e.date)) — \(e.text)") }
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(lines.joined(separator: "\n"), forType: .string)
+        actionToast = (text: "Diagnostic copiat în clipboard", success: true)
+    }
+
+    private func levelText(_ level: MetricLevel) -> String {
+        switch level {
+        case .ok: return "OK"
+        case .warning: return "Atenție"
+        case .critical: return "Critic"
+        }
+    }
+
+    /// Force Close Hanging DaVinci — apare doar când procesul e detectat
+    /// agățat (vezi `checkHangingDaVinci`), niciodată în timp ce Resolve
+    /// rulează normal cu fereastră vizibilă.
+    func forceCloseHangingDaVinci() {
+        guard runningAction == nil else { return }
+        beginAction(.forceKillDaVinci)
+        actionLog.removeAll()
+        logStep("[INFO] Force Close Hanging DaVinci started…", .info)
+        Task { @MainActor in
+            await self.stepDelay()
+            let count = ProcessInspector.forceKillHangingDaVinci()
+            await self.stepDelay()
+            if count > 0 {
+                self.logStep("[SUCCESS] Închise \(count) proces(e) DaVinci Resolve agățate.", .success)
+                self.hangingDaVinciDetected = false
+                self.endAction(success: true, toast: "DaVinci Resolve închis forțat")
+            } else {
+                self.logStep("[INFO] Niciun proces agățat găsit.", .info)
+                self.endAction(success: true, toast: "Nimic de închis")
+            }
+            self.updateRecommendations()
+        }
     }
 
     private func updateRecommendations() {
@@ -181,6 +355,9 @@ final class DashboardViewModel: ObservableObject {
         }
         if logConsole.contains(where: { $0.level == .critical }) {
             items.append(Recommendation(text: "Recent critical event in DaVinci log — check console below", level: .critical))
+        }
+        if hangingDaVinciDetected {
+            items.append(Recommendation(text: "DaVinci Resolve pare agățat în fundal (blochează RAM/VRAM) — Force Close Hanging DaVinci", level: .critical))
         }
         if items.isEmpty {
             items.append(Recommendation(text: "All systems normal", level: .ok))

@@ -16,6 +16,10 @@
         <local:RunningActionEqualsConverter x:Key="ActionEquals"/>
         <local:RunningActionToBoolInverseConverter x:Key="ActionIdle"/>
         <local:ActionButtonTextConverter x:Key="ActionButtonText"/>
+        <local:LogFilterToBackgroundConverter x:Key="LogFilterBg"/>
+        <local:BoolToPauseGlyphConverter x:Key="PauseGlyph"/>
+        <local:LogLineFormatConverter x:Key="LogLineFormat"/>
+        <local:TextContainsKeywordToBoldConverter x:Key="KeywordBold"/>
 
         <Style x:Key="CardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
@@ -84,6 +88,43 @@
                                              Foreground="{Binding SwapLevel, Converter={StaticResource LevelToBrush}}"/>
                                 <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center"
                                            Text="{Binding SwapFraction, StringFormat={}{0:P0}}"/>
+                            </Grid>
+
+                            <!-- Top RAM Consumers / Top Swap Consumers -->
+                            <Separator Margin="0,10,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="Top RAM Consumers" FontSize="10" Style="{StaticResource CaptionStyle}"/>
+                                    <ItemsControl ItemsSource="{Binding TopRamProcesses}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="10" Style="{StaticResource CaptionStyle}"
+                                                               Text="{Binding ValueGB, StringFormat={}{0:F1} GB}"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                    <TextBlock Text="Top Swap Consumers" FontSize="10" Style="{StaticResource CaptionStyle}"/>
+                                    <ItemsControl ItemsSource="{Binding TopSwapProcesses}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="10" Style="{StaticResource CaptionStyle}"
+                                                               Text="{Binding ValueGB, StringFormat={}{0:F1} GB}"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -156,9 +197,26 @@
                         <StackPanel>
                             <DockPanel>
                                 <TextBlock Text="Real-time Log Decoder" Style="{StaticResource HeadlineStyle}"/>
-                                <Button DockPanel.Dock="Right" Content="⟳" Width="24" Click="OnForceSyncClicked"
-                                        IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Content="⤓" Width="24" Click="OnExportLogClicked" ToolTip="Export Log..."/>
+                                    <Button Content="{Binding IsLogPaused, Converter={StaticResource PauseGlyph}}"
+                                            Width="24" Click="OnTogglePauseLogClicked" ToolTip="Pause/Resume Auto-scroll"/>
+                                    <Button Content="⟳" Width="24" Click="OnForceSyncClicked"
+                                            IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"/>
+                                </StackPanel>
                             </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button Content="All" Tag="All" Click="OnLogFilterClicked" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                        Background="{Binding LogFilter, Converter={StaticResource LogFilterBg}, ConverterParameter=All}"/>
+                                <Button Tag="Errors" Click="OnLogFilterClicked" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                        Background="{Binding LogFilter, Converter={StaticResource LogFilterBg}, ConverterParameter=Errors}"
+                                        Content="{Binding ErrorCount, StringFormat=Errors ({0})}"/>
+                                <Button Tag="Warnings" Click="OnLogFilterClicked" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                        Background="{Binding LogFilter, Converter={StaticResource LogFilterBg}, ConverterParameter=Warnings}"
+                                        Content="{Binding WarningCount, StringFormat=Warnings ({0})}"/>
+                                <Button Content="Render Events" Tag="RenderEvents" Click="OnLogFilterClicked" Padding="6,2" FontSize="10"
+                                        Background="{Binding LogFilter, Converter={StaticResource LogFilterBg}, ConverterParameter=RenderEvents}"/>
+                            </StackPanel>
                             <ScrollViewer Height="160" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding LogConsole}">
                                     <ItemsControl.ItemTemplate>
@@ -166,11 +224,15 @@
                                             <TextBlock FontFamily="Consolas" FontSize="11" Margin="0,0,0,2"
                                                        Foreground="{Binding Level, Converter={StaticResource LevelToBrush}}">
                                                 <TextBlock.Text>
-                                                    <MultiBinding StringFormat="{}{0:HH:mm:ss}  {1}">
+                                                    <MultiBinding Converter="{StaticResource LogLineFormat}">
                                                         <Binding Path="Date"/>
                                                         <Binding Path="Text"/>
+                                                        <Binding Path="Level"/>
                                                     </MultiBinding>
                                                 </TextBlock.Text>
+                                                <TextBlock.FontWeight>
+                                                    <Binding Path="Text" Converter="{StaticResource KeywordBold}"/>
+                                                </TextBlock.FontWeight>
                                             </TextBlock>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -203,8 +265,12 @@
                     <StackPanel>
                         <DockPanel>
                             <TextBlock Text="CacheClip disk" Style="{StaticResource HeadlineStyle}"/>
-                            <Button DockPanel.Dock="Right" Content="Schimbă folderul…" Click="OnChooseFolderClicked"
-                                    Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AccentBrush}"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Content="📁" Width="26" Click="OnOpenCacheFolderClicked" ToolTip="Open Cache Folder in Explorer"
+                                        Background="Transparent" BorderThickness="0"/>
+                                <Button Content="Schimbă folderul…" Click="OnChooseFolderClicked"
+                                        Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AccentBrush}"/>
+                            </StackPanel>
                         </DockPanel>
                         <ProgressBar x:Name="CacheDiskUsageBar" Height="8" Margin="0,10,0,8" Minimum="0" Maximum="1"/>
                         <DockPanel>
@@ -230,6 +296,12 @@
                     <Button Margin="0,0,10,10" Padding="12,7" Click="OnOptimiseClicked"
                             IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
                             Content="{Binding RunningAction, Converter={StaticResource ActionButtonText}, ConverterParameter='OptimiseSystem|Optimise System|Optimising…'}"/>
+                    <Button Margin="0,0,10,10" Padding="12,7" Content="Copy Diagnostics" Click="OnCopyDiagnosticsClicked"/>
+                    <Button Margin="0,0,10,10" Padding="12,7" Click="OnForceCloseDaVinciClicked"
+                            Visibility="{Binding HangingDaVinciDetected, Converter={StaticResource BoolToVis}}"
+                            IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
+                            Foreground="IndianRed"
+                            Content="{Binding RunningAction, Converter={StaticResource ActionButtonText}, ConverterParameter='ForceKillDaVinci|Force Close Hanging DaVinci|Closing…'}"/>
                     <Button Margin="0,0,10,10" Padding="12,7" Content="Vezi log"
                             Visibility="{Binding ShowActionConsole, Converter={StaticResource BoolToVis}}"
                             Click="OnShowConsoleClicked" Background="Transparent" BorderThickness="0"

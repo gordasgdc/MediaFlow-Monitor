@@ -22,6 +22,8 @@ public partial class OverlayWindow : Window
     private bool _isVisible;
     private ActionConsoleWindow? _consoleWindow;
 
+    public DashboardViewModel ViewModel => _vm;
+
     public OverlayWindow(SystemMetricsMonitor metrics, DaVinciLogWatcher logWatcher)
     {
         InitializeComponent();
@@ -199,6 +201,22 @@ public partial class OverlayWindow : Window
     private void OnOptimiseClicked(object sender, RoutedEventArgs e) => _vm.OptimiseSystem();
 
     private void OnShowConsoleClicked(object sender, RoutedEventArgs e) => ShowConsoleWindow();
+
+    private void OnCopyDiagnosticsClicked(object sender, RoutedEventArgs e) => _vm.CopyDiagnosticsToClipboard();
+
+    private void OnForceCloseDaVinciClicked(object sender, RoutedEventArgs e) => _vm.ForceCloseHangingDaVinci();
+
+    private void OnOpenCacheFolderClicked(object sender, RoutedEventArgs e) => _vm.OpenCacheFolderInExplorer();
+
+    private void OnExportLogClicked(object sender, RoutedEventArgs e) => _vm.ExportLog();
+
+    private void OnTogglePauseLogClicked(object sender, RoutedEventArgs e) => _vm.ToggleLogPause();
+
+    private void OnLogFilterClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { Tag: string tag } && Enum.TryParse<LogFilter>(tag, out var filter))
+            _vm.LogFilter = filter;
+    }
 
     private void OnPurgeCacheClicked(object sender, RoutedEventArgs e)
     {
