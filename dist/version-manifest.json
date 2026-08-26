@@ -14,8 +14,8 @@
       "version": "1.7.0",
       "packageUrl": "dist/MediaFlowMonitorSetup-x64-1.7.0.exe",
       "sha256": "7c35a351ea692fa80337e9e4bb13d1f8ad7f5aa23eb08ef11761bc0c4b651820",
-      "packageUrlArm64": "dist/MediaFlowMonitorSetup-arm64-1.6.0.exe",
-      "sha256Arm64": "4441981c364d3348862f1ef19730e20ec3fd226476393be6c38d7691fe4f22d2"
+      "packageUrlArm64": "dist/MediaFlowMonitorSetup-arm64-1.7.0.exe",
+      "sha256Arm64": "f32d9cf97818a58fa9f4f181fd1620378d3f75431a7206de37b1c3e2520088cb"
     }
   }
 }
