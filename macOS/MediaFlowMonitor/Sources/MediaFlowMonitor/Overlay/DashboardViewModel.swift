@@ -14,6 +14,26 @@ struct Recommendation: Identifiable {
     let level: MetricLevel
 }
 
+/// Nivel de linie în consola de execuție live (Terminal-style), pentru
+/// feedback vizual pe Purge Cache / Force Sync Log / Optimise System —
+/// distinct de `MetricLevel` (acela descrie stare de sistem, nu progres).
+enum ActionLogLevel {
+    case info, exec, success, error
+}
+
+struct ActionLogEntry: Identifiable {
+    let id = UUID()
+    let date: Date
+    let text: String
+    let level: ActionLogLevel
+}
+
+/// Ce buton de acțiune rulează în acest moment — controlează spinner-ul
+/// și textul butonului respectiv ("Purging…" etc.).
+enum RunningAction: Equatable {
+    case purgeCache, forceSyncLog, optimiseSystem
+}
+
 struct SuggestedAction: Identifiable {
     let id = UUID()
     let title: String
@@ -44,6 +64,15 @@ final class DashboardViewModel: ObservableObject {
     @Published var recommendations: [Recommendation] = []
     @Published var suggestedAction: SuggestedAction?
     @Published var lastActionMessage: String?
+
+    // Consola de execuție live (Terminal-style) pentru butoanele de acțiune.
+    @Published var actionLog: [ActionLogEntry] = []
+    @Published var runningAction: RunningAction?
+    @Published var showActionConsole: Bool = false
+    /// Toast scurt afișat la finalizare (succes sau eșec) — se auto-ascunde.
+    @Published var actionToast: (text: String, success: Bool)?
+
+    private static let maxActionLogLines = 200
 
     private static let maxConsoleLines = 60
     private let vramHistoryStore = MetricsHistory()
@@ -166,23 +195,90 @@ final class DashboardViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Consola de execuție live
+
+    private func logStep(_ text: String, _ level: ActionLogLevel = .exec) {
+        actionLog.append(ActionLogEntry(date: Date(), text: text, level: level))
+        if actionLog.count > Self.maxActionLogLines {
+            actionLog.removeFirst(actionLog.count - Self.maxActionLogLines)
+        }
+    }
+
+    private func beginAction(_ action: RunningAction) {
+        runningAction = action
+        showActionConsole = true
+        actionToast = nil
+    }
+
+    private func endAction(success: Bool, toast: String) {
+        runningAction = nil
+        actionToast = (text: toast, success: success)
+        lastActionMessage = toast
+        // Toast-ul dispare singur — consola rămâne deschisă ca să poată fi
+        // recitită, userul o închide manual din Dashboard.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if self?.actionToast?.text == toast { self?.actionToast = nil }
+        }
+    }
+
+    /// Pauză mică între pași — doar UX (utilizatorul trebuie să apuce să
+    /// citească fiecare linie), nu simulează timp de execuție fals: pașii
+    /// în sine (disk info, purge, forceSync) rulează sincron, real.
+    private func stepDelay() async {
+        try? await Task.sleep(nanoseconds: 250_000_000)
+    }
+
     func forceSyncLog() {
-        logWatcher?.forceSync()
-        lastActionMessage = "Log resynced"
+        guard runningAction == nil else { return }
+        beginAction(.forceSyncLog)
+        actionLog.removeAll()
+        logStep("[INFO] Force Sync Log started…", .info)
+        Task { @MainActor in
+            await stepDelay()
+            logStep("[EXEC] Re-reading DaVinci Resolve log tail…")
+            logWatcher?.forceSync()
+            await stepDelay()
+            logStep("[SUCCESS] Log resynced.", .success)
+            endAction(success: true, toast: "Log resynced")
+        }
     }
 
     /// Cere confirmare userului ÎNAINTE de a șterge orice — Purge Cache e
     /// distructiv, niciodată executat fără un pas explicit de confirmare.
     func requestPurgeCache(confirm: @escaping (@escaping (Bool) -> Void) -> Void) {
+        guard runningAction == nil else { return }
         confirm { [weak self] approved in
             guard approved, let self else { return }
-            do {
-                let count = try CacheFolderLocator.purge()
-                self.lastActionMessage = "Purged \(count) item(s) from cache"
-                self.suggestedAction = nil
-                self.checkDisk()
-            } catch {
-                self.lastActionMessage = "Purge failed: \(error.localizedDescription)"
+            self.beginAction(.purgeCache)
+            self.actionLog.removeAll()
+            self.logStep("[INFO] Purge Cache started…", .info)
+            Task { @MainActor in
+                await self.stepDelay()
+                let path = CacheFolderLocator.activePath
+                self.logStep("[INFO] Scanning cache folder: \(path.path)", .info)
+                await self.stepDelay()
+                let before = CacheFolderLocator.diskInfo()
+                if let before {
+                    self.logStep(String(format: "[EXEC] %.1f GB free before purge…", before.freeGB))
+                }
+                do {
+                    let count = try CacheFolderLocator.purge()
+                    await self.stepDelay()
+                    self.logStep("[EXEC] Purged \(count) item(s)…")
+                    self.suggestedAction = nil
+                    self.checkDisk()
+                    if let after = self.diskInfo, let before {
+                        let freed = max(after.freeGB - before.freeGB, 0)
+                        self.logStep(String(format: "[SUCCESS] System Optimised — freed %.1f GB.", freed), .success)
+                    } else {
+                        self.logStep("[SUCCESS] Purge Cache completed successfully!", .success)
+                    }
+                    self.endAction(success: true, toast: "Purged \(count) item(s) from cache")
+                } catch {
+                    self.logStep("[ERROR] Purge failed: \(error.localizedDescription)", .error)
+                    self.endAction(success: false, toast: "Purge failed")
+                }
             }
         }
     }
@@ -191,8 +287,23 @@ final class DashboardViewModel: ObservableObject {
         // Onest: nu există un singur "buton magic" de optimizare sigur —
         // combinăm pașii non-distructivi deja disponibili (sync log +
         // recalcul disc); ștergerea de cache rămâne separată, cu confirmare.
-        forceSyncLog()
-        checkDisk()
-        lastActionMessage = "System check refreshed"
+        guard runningAction == nil else { return }
+        beginAction(.optimiseSystem)
+        actionLog.removeAll()
+        logStep("[INFO] Optimise System started…", .info)
+        Task { @MainActor in
+            await stepDelay()
+            logStep("[EXEC] Re-reading DaVinci Resolve log tail…")
+            logWatcher?.forceSync()
+            await stepDelay()
+            logStep("[EXEC] Recalculating CacheClip disk usage…")
+            checkDisk()
+            await stepDelay()
+            if let disk = diskInfo {
+                logStep(String(format: "[INFO] %.1f GB free on %@", disk.freeGB, disk.path.path))
+            }
+            logStep("[SUCCESS] System check refreshed.", .success)
+            endAction(success: true, toast: "System check refreshed")
+        }
     }
 }
