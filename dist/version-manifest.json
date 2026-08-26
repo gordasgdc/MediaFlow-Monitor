@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.1.1",
+  "latestVersion": "1.2.0",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.1.1: verificare de revocare licenta prin Supabase (fail-open, aceeasi baza de date a ecosistemului GDC).",
+  "releaseNotes": "v1.2.0: Dashboard Pro complet \u2014 grafice live VRAM/Swap si CPU per-thread, Real-time Log Decoder colorat, panou de Diagnostic si Recomandari, detectare automata + selectie manuala a folderului CacheClip (inclusiv discuri externe Thunderbolt), bara de actiuni Purge Cache / Force Sync Log / Optimise System.",
   "platforms": {
     "macos": {
-      "version": "1.1.1",
-      "packageUrl": "dist/MediaFlowMonitor-macOS-1.1.1.zip",
-      "sha256": "3297a6369d5b255be3d1c900fffc7636790494f83b918d02f8464df8adb1253e"
+      "version": "1.2.0",
+      "packageUrl": "dist/MediaFlowMonitor-macOS-1.2.0.zip",
+      "sha256": "8b18a1bb72bc08b76e07d8ac494afbf398bb2ba0b86fb790748d59f0da7cbd24"
     },
     "windows": {
       "version": "1.0.0",
