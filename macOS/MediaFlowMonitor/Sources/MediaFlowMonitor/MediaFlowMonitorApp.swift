@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // echivalent LSUIElement: fără icon în Dock
 
+        // Bypass App Translocation: dacă rulează din Downloads/.zip extras,
+        // propune mutarea în /Applications înainte de orice altă inițializare.
+        AppMover.promptIfNeeded()
+
         // BUG FIX: fără fereastră vizibilă + fără status item, macOS marchează
         // procesul ca terminabil automat (Automatic Termination) — vezi log:
         // "_kLSApplicationWouldBeTerminatedByTALKey=1". Dezactivat explicit.

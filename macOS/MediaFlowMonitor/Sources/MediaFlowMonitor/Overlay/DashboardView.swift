@@ -20,6 +20,7 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(spacing: 14) {
+            topBar
             healthRow
             performanceSection
             HStack(alignment: .top, spacing: 14) {
@@ -30,7 +31,7 @@ struct DashboardView: View {
             actionBar
         }
         .padding(16)
-        .frame(width: 780)
+        .frame(minWidth: 620, maxWidth: .infinity, minHeight: 560, maxHeight: .infinity)
         .background(.ultraThinMaterial)
         .confirmationDialog(
             "Golește tot conținutul din \(CacheFolderLocator.activePath.path)?",
@@ -42,6 +43,25 @@ struct DashboardView: View {
                 vm.requestPurgeCache { callback in callback(true) }
             }
             Button("Anulează", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Top bar (theme selector)
+
+    private var topBar: some View {
+        HStack {
+            Text("MediaFlow Monitor").font(.headline)
+            Spacer()
+            Picker("Temă", selection: Binding(
+                get: { ThemeManager.shared.current },
+                set: { ThemeManager.shared.set($0) }
+            )) {
+                ForEach(AppTheme.allCases, id: \.self) { theme in
+                    Text(theme.label).tag(theme)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 180)
         }
     }
 

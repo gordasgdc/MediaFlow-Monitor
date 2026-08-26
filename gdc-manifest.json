@@ -2,8 +2,8 @@
   "$schema": "https://gdc.internal/schemas/plugin-manifest-v1.json",
   "name": "MediaFlow Monitor",
   "publisher": "GDC",
-  "version": "1.2.0",
-  "description": "Utilitar nativ ultra-lightweight pentru monitorizare RAM/Swap și DaVinci Resolve log watcher.",
+  "version": "1.3.0",
+  "description": "Utilitar nativ ultra-lightweight pentru monitorizare RAM/Swap \u0219i DaVinci Resolve log watcher.",
   "category": "utility",
   "platforms": {
     "macos": {
@@ -26,7 +26,11 @@
     "macos": "Cmd+Shift+M",
     "windows": "Ctrl+Shift+M"
   },
-  "localization": ["en", "ro", "es"],
+  "localization": [
+    "en",
+    "ro",
+    "es"
+  ],
   "buildStage": "public-beta",
   "release": {
     "channel": "public-beta",
