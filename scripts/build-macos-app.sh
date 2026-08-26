@@ -80,6 +80,17 @@ import json, pathlib
 p = pathlib.Path('$DIST_DIR/version-manifest.json')
 d = json.loads(p.read_text())
 d['platforms']['macos']['sha256'] = '$SHA256'
+d['platforms']['macos']['version'] = '$VERSION'
+d['platforms']['macos']['packageUrl'] = 'dist/$ZIP_NAME'
+d['latestVersion'] = '$VERSION'
+p.write_text(json.dumps(d, indent=2) + '\n')
+"
+# gdc-manifest.json versiunea trebuie sa ramana in sincron cu fiecare release.
+python3 -c "
+import json, pathlib
+p = pathlib.Path('$ROOT/gdc-manifest.json')
+d = json.loads(p.read_text())
+d['version'] = '$VERSION'
 p.write_text(json.dumps(d, indent=2) + '\n')
 "
 

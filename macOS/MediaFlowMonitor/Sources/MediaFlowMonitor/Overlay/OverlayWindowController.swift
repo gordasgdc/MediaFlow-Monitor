@@ -30,6 +30,9 @@ final class OverlayWindowController: NSWindowController {
         panel.contentView = NSHostingView(
             rootView: DashboardView(metrics: metrics, logWatcher: logWatcher)
         )
+        // Redimensionare liberă, cu o dimensiune minimă de siguranță ca
+        // panourile (grafice, log decoder) să rămână lizibile.
+        panel.minSize = NSSize(width: 620, height: 560)
         panel.center()
         panel.orderOut(nil) // pornește ascuns
 
