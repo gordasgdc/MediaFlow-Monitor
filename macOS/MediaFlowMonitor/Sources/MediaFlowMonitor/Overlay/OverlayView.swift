@@ -22,13 +22,55 @@ struct OverlayView: View {
             MetricRing(label: String(localized: "metric.ram", bundle: .module), value: viewModel.ramFraction, level: viewModel.ramLevel)
             MetricRing(label: String(localized: "metric.swap", bundle: .module), value: viewModel.swapFraction, level: viewModel.swapLevel)
 
+            if let vram = viewModel.vramUsedGB {
+                HStack {
+                    Image(systemName: "cpu.fill").foregroundStyle(.secondary)
+                    Text("VRAM").font(.subheadline)
+                    Spacer()
+                    Text(String(format: "%.1f GB", vram)).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+
+            if let free = viewModel.diskFreeGB {
+                HStack {
+                    Circle().fill(color(for: viewModel.diskLevel)).frame(width: 8, height: 8)
+                    Text("CacheClip disk").font(.caption)
+                    Spacer()
+                    Text(String(format: "%.0f GB liber", free)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+
+            if !viewModel.recentAlerts.isEmpty {
+                Divider()
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(viewModel.recentAlerts) { alert in
+                        HStack(spacing: 6) {
+                            Image(systemName: alert.icon)
+                                .foregroundStyle(color(for: alert.level))
+                                .font(.caption)
+                            Text(alert.text)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+
             if let action = viewModel.suggestedAction {
                 ActionCard(action: action) { viewModel.perform(action) }
             }
         }
         .padding(16)
-        .frame(width: 260)
+        .frame(width: 280)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private func color(for level: MetricLevel) -> Color {
+    switch level {
+    case .ok: return .green
+    case .warning: return .yellow
+    case .critical: return .red
     }
 }
 

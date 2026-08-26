@@ -55,7 +55,7 @@ final class SystemMetrics {
         snapshotPublisher.send(MemorySnapshot(
             ramUsedGB: ram.used, ramTotalGB: ram.total,
             swapUsedGB: swap, swapLevel: level,
-            vramUsedGB: nil // integrated GPU: vezi notă mai jos
+            vramUsedGB: VRAMProbe.readUsedGB()
         ))
     }
 
@@ -91,7 +91,3 @@ final class SystemMetrics {
         return Double(swap.xsu_used) / 1_073_741_824
     }
 }
-
-// NOTĂ VRAM: pe Apple Silicon (memorie unificată) VRAM = subset din RAM,
-// citit via IOKit (`IOAccelerator` performance statistics) — modul separat,
-// planificat ca `VRAMProbe.swift` pentru a nu încărca acest fișier cu IOKit.
