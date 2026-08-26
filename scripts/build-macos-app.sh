@@ -107,6 +107,10 @@ echo "✅ Gata: $APP_PATH (v$VERSION)"
 echo "   Arhivă privată: $DIST_DIR/$ZIP_NAME (sha256: $SHA256) — .app + uninstaller + PDF (Regula 6)"
 echo "   Deschide .app cu dublu-click din Finder, apoi testează Cmd+Shift+M."
 
+echo ""
+echo "→ Construiesc installer-ul nativ .pkg…"
+bash "$ROOT/scripts/build-macos-pkg.sh"
+
 # Sincronizează versiunea + update.json pe gordas.dev/media-flow-monitor —
 # nu comite/pushuiește automat (repo diferit), doar scrie fișierele local.
 bash "$ROOT/scripts/sync-site.sh" || echo "→ ⚠️  Sincronizarea site-ului a eșuat — vezi eroarea de mai sus."

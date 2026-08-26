@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.4.0",
+  "latestVersion": "1.5.0",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.4.0: meniu nativ Help/About - Ghid de utilizare in 3 limbi (RO/EN/ES) accesibil din meniul de sus si din bara de stare, fereastra Despre cu logo, versiune+build, statut licenta si Machine ID cu copiere rapida.",
+  "releaseNotes": "v1.5.0: instalator nativ .pkg (semnat Developer ID Installer + notarizat Apple) - wizard clasic macOS, instalare automata directa in /Applications la Continue/Install, fara nicio avertizare Gatekeeper.",
   "platforms": {
     "macos": {
-      "version": "1.4.0",
-      "packageUrl": "dist/MediaFlowMonitor-macOS-1.4.0.zip",
-      "sha256": "65ea4f7959a5dee1db1753a7405984ebd56d1c63083c22fcc500ecf4fc5f8886"
+      "version": "1.5.0",
+      "packageUrl": "dist/MediaFlowMonitor-1.5.0.pkg",
+      "sha256": "ff07c859d252197209938c1bf1be0e9e598f9a6ccfb1702fae4410e1826901c8"
     },
     "windows": {
       "version": "1.0.0",

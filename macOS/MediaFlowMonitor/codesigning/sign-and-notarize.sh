@@ -2,21 +2,18 @@
 # codesigning/sign-and-notarize.sh — copiat neschimbat din modulul comun GDC
 # (GDCPluginManager/codesigning/), vezi acel README.md pentru cablare completă.
 #
-# NU face nimic (iese cu succes, fără să semneze) dacă APPLE_SIGN_IDENTITY_APP
+# NU face nimic (iese cu succes, fără să semneze) dacă identitatea cerută
+# pentru tipul respectiv (APPLE_SIGN_IDENTITY_APP / APPLE_SIGN_IDENTITY_INSTALLER)
 # nu e setată — build-ul rămâne ad-hoc/nesemnat, ca înainte.
 #
 # Usage:
 #   codesigning/sign-and-notarize.sh app /path/to/MediaFlowMonitor.app
+#   codesigning/sign-and-notarize.sh pkg /path/to/MediaFlowMonitor-1.4.1.pkg
 set -euo pipefail
 
 KIND="${1:?Usage: sign-and-notarize.sh <app|pkg> <path>}"
 TARGET="${2:?Usage: sign-and-notarize.sh <app|pkg> <path>}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-if [ -z "${APPLE_SIGN_IDENTITY_APP:-}" ]; then
-    echo "==> [codesigning] APPLE_SIGN_IDENTITY_APP nesetata - sar peste semnare/notarizare (build ramane nesemnat, ca inainte)."
-    exit 0
-fi
 
 sign_app() {
     local app_path="$1"
@@ -72,9 +69,36 @@ notarize() {
     xcrun stapler staple "$target"
 }
 
+sign_pkg() {
+    local pkg_path="$1"
+    if [ -z "${APPLE_SIGN_IDENTITY_INSTALLER:-}" ]; then
+        echo "==> [codesigning] APPLE_SIGN_IDENTITY_INSTALLER nesetata - pachetul .pkg ramane nesemnat (Gatekeeper va afisa avertisment la instalare)."
+        return 1
+    fi
+    echo "==> [codesigning] Semnez pachetul .pkg cu certificatul Developer ID Installer…"
+    local signed_path="${pkg_path%.pkg}-signed.pkg"
+    productsign --sign "$APPLE_SIGN_IDENTITY_INSTALLER" "$pkg_path" "$signed_path"
+    mv -f "$signed_path" "$pkg_path"
+    echo "==> [codesigning] Verific semnătura pachetului…"
+    pkgutil --check-signature "$pkg_path"
+}
+
 case "$KIND" in
-    app) sign_app "$TARGET"; notarize "$TARGET" ;;
-    *) echo "Prim argument necunoscut: '$KIND' (astept 'app')" >&2; exit 1 ;;
+    app)
+        if [ -z "${APPLE_SIGN_IDENTITY_APP:-}" ]; then
+            echo "==> [codesigning] APPLE_SIGN_IDENTITY_APP nesetata - sar peste semnare/notarizare (build ramane nesemnat, ca inainte)."
+            exit 0
+        fi
+        sign_app "$TARGET"; notarize "$TARGET"
+        ;;
+    pkg)
+        if sign_pkg "$TARGET"; then
+            notarize "$TARGET"
+        else
+            echo "==> [codesigning] Sar peste notarizarea .pkg (nesemnat)."
+        fi
+        ;;
+    *) echo "Prim argument necunoscut: '$KIND' (astept 'app' sau 'pkg')" >&2; exit 1 ;;
 esac
 
 echo "==> [codesigning] Gata: $TARGET"
