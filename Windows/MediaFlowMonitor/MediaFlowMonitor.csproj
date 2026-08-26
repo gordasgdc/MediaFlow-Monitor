@@ -35,4 +35,18 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
   </ItemGroup>
 
+  <!-- BUG FIX (2026-08-26): UseWindowsForms=true + ImplicitUsings=enable
+       adauga automat "System.Windows.Forms" si "System.Drawing" ca global
+       usings, care intra in conflict cu tipurile WPF cu acelasi nume
+       (Timer, Brush/Brushes, Application, Rectangle) - eroare CS0104
+       "ambiguous reference" pe orice fisier care nu le calificase deja
+       explicit. Codul existent a fost si el calificat explicit (belt-and-
+       suspenders), dar radacina reala e aici: scoatem cele doua usings
+       implicite, ca System.Windows.Forms/System.Drawing sa ramana
+       accesibile doar prin `using` explicit sau nume complet calificat. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
 </Project>

@@ -63,7 +63,7 @@ public sealed class ThemeManager
             : "pack://application:,,,/Themes/LightTheme.xaml", UriKind.Absolute);
         var dict = new ResourceDictionary { Source = uri };
 
-        var app = Application.Current;
+        var app = System.Windows.Application.Current;
         if (app == null) return;
         // Scoate orice temă aplicată anterior (identificată după conținutul
         // "Themes/" din sursă), apoi adaugă noua — evită acumularea de

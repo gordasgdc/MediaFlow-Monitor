@@ -24,7 +24,7 @@ public sealed class SystemMetricsMonitor : IDisposable
     private PerformanceCounter? _committedBytesCounter;
     private List<PerformanceCounter>? _coreCounters;
     private List<PerformanceCounter>? _vramUsageCounters;
-    private Timer? _timer;
+    private System.Threading.Timer? _timer;
     private double _lastSwapUsed;
 
     private readonly TimeSpan _idleInterval = TimeSpan.FromSeconds(3);
@@ -64,7 +64,7 @@ public sealed class SystemMetricsMonitor : IDisposable
         }
         catch { _vramUsageCounters = null; }
 
-        _timer = new Timer(_ => Tick(), null, TimeSpan.Zero, IsTimelineActive ? _activeInterval : _idleInterval);
+        _timer = new System.Threading.Timer(_ => Tick(), null, TimeSpan.Zero, IsTimelineActive ? _activeInterval : _idleInterval);
     }
 
     public void Stop()

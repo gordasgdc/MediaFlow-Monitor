@@ -90,11 +90,11 @@ public partial class OverlayWindow : Window
         double w = PerformanceCanvas.ActualWidth, h = PerformanceCanvas.ActualHeight;
         if (w <= 0 || h <= 0) return;
 
-        DrawSeries(_vm.VramHistory, Brushes.DodgerBlue, w, h);
-        DrawSeries(_vm.SwapHistory, Brushes.IndianRed, w, h);
+        DrawSeries(_vm.VramHistory, System.Windows.Media.Brushes.DodgerBlue, w, h);
+        DrawSeries(_vm.SwapHistory, System.Windows.Media.Brushes.IndianRed, w, h);
     }
 
-    private void DrawSeries(System.Collections.Generic.IReadOnlyList<HistoryPoint> points, Brush brush, double w, double h)
+    private void DrawSeries(System.Collections.Generic.IReadOnlyList<HistoryPoint> points, System.Windows.Media.Brush brush, double w, double h)
     {
         if (points.Count < 2) return;
         double max = Math.Max(points.Max(p => p.Value), 1);
@@ -118,8 +118,8 @@ public partial class OverlayWindow : Window
         for (int i = 0; i < cores.Length; i++)
         {
             double usage = cores[i];
-            var brush = usage > 0.85 ? Brushes.IndianRed : usage > 0.6 ? Brushes.Goldenrod : Brushes.MediumSeaGreen;
-            var bar = new Rectangle
+            var brush = usage > 0.85 ? System.Windows.Media.Brushes.IndianRed : usage > 0.6 ? System.Windows.Media.Brushes.Goldenrod : System.Windows.Media.Brushes.MediumSeaGreen;
+            var bar = new System.Windows.Shapes.Rectangle
             {
                 Width = 20,
                 Height = Math.Max(2, usage * 120),
@@ -203,7 +203,7 @@ public partial class OverlayWindow : Window
     private void OnPurgeCacheClicked(object sender, RoutedEventArgs e)
     {
         var path = CacheFolderLocator.ActivePath;
-        var result = MessageBox.Show(
+        var result = System.Windows.MessageBox.Show(
             $"Golește tot conținutul din {path}?",
             "Confirmare Purge Cache", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes) return;
