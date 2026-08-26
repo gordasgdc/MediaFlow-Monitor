@@ -20,7 +20,7 @@ public sealed class MetricLevelToBrushConverter : IValueConverter
             MetricLevel.Warning => "WarningBrush",
             _ => "OkBrush",
         };
-        return Application.Current.TryFindResource(key) ?? Brushes.Gray;
+        return System.Windows.Application.Current.TryFindResource(key) ?? System.Windows.Media.Brushes.Gray;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -65,10 +65,10 @@ public sealed class ActionLogLevelToBrushConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
         value switch
         {
-            ActionLogLevel.Success => Brushes.LimeGreen,
-            ActionLogLevel.Error => Brushes.IndianRed,
-            ActionLogLevel.Exec => Brushes.DeepSkyBlue,
-            _ => Brushes.LightGray,
+            ActionLogLevel.Success => System.Windows.Media.Brushes.LimeGreen,
+            ActionLogLevel.Error => System.Windows.Media.Brushes.IndianRed,
+            ActionLogLevel.Exec => System.Windows.Media.Brushes.DeepSkyBlue,
+            _ => System.Windows.Media.Brushes.LightGray,
         };
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -78,7 +78,7 @@ public sealed class ActionLogLevelToBrushConverter : IValueConverter
 public sealed class RunningActionToStatusBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is RunningAction a && a != RunningAction.None ? Brushes.Goldenrod : Brushes.MediumSeaGreen;
+        value is RunningAction a && a != RunningAction.None ? System.Windows.Media.Brushes.Goldenrod : System.Windows.Media.Brushes.MediumSeaGreen;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
