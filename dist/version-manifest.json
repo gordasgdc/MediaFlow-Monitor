@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.3.0",
+  "latestVersion": "1.3.1",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.3.0: Mutare automata in /Applications la prima lansare din afara folderului (App Translocation bypass), fereastra Dashboard redimensionabila liber (minim 620x560), selector explicit de tema Dark/Light/System in bara superioara, independent de setarea sistemului.",
+  "releaseNotes": "v1.3.1: Indicator de procesare live (consola stil Terminal) pentru Purge Cache / Force Sync Log / Optimise System \u2014 pasi in timp real colorati, spinner pe buton in timpul executiei, si toast de confirmare la finalizare.",
   "platforms": {
     "macos": {
-      "version": "1.3.0",
-      "packageUrl": "dist/MediaFlowMonitor-macOS-1.3.0.zip",
-      "sha256": "bf14edcb0ae0e8d531ba9d5e41613ba552177cc943143c4b6f2fa7d6b198ac9c"
+      "version": "1.3.1",
+      "packageUrl": "dist/MediaFlowMonitor-macOS-1.3.1.zip",
+      "sha256": "e7161c954a613c7da23bd8d5714a912e00d28cdcdd447940176f44b5775c22c5"
     },
     "windows": {
       "version": "1.0.0",

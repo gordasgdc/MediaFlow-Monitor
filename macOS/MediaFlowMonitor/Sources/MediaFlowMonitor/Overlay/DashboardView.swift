@@ -33,6 +33,7 @@ struct DashboardView: View {
         .padding(16)
         .frame(minWidth: 620, maxWidth: .infinity, minHeight: 560, maxHeight: .infinity)
         .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) { toastView }
         .confirmationDialog(
             "Golește tot conținutul din \(CacheFolderLocator.activePath.path)?",
             isPresented: $showPurgeConfirm, titleVisibility: .visible
@@ -43,6 +44,74 @@ struct DashboardView: View {
                 vm.requestPurgeCache { callback in callback(true) }
             }
             Button("Anulează", role: .cancel) {}
+        }
+        .sheet(isPresented: $vm.showActionConsole) {
+            actionConsoleSheet
+        }
+    }
+
+    // MARK: - Live process console (Terminal-style)
+
+    private var actionConsoleSheet: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Circle().fill(vm.runningAction == nil ? Color.green : Color.yellow).frame(width: 9, height: 9)
+                Text(vm.runningAction == nil ? "Proces finalizat" : "Se execută…").font(.headline)
+                Spacer()
+                if vm.runningAction != nil {
+                    ProgressView().controlSize(.small)
+                }
+                Button("Închide") { vm.showActionConsole = false }
+                    .disabled(vm.runningAction != nil)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(vm.actionLog) { entry in
+                            Text(entry.text)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(actionLogColor(entry.level))
+                                .id(entry.id)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .onChange(of: vm.actionLog.count) { _ in
+                    if let last = vm.actionLog.last?.id {
+                        withAnimation { proxy.scrollTo(last, anchor: .bottom) }
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(16)
+        .frame(width: 520, height: 380)
+    }
+
+    private func actionLogColor(_ level: ActionLogLevel) -> Color {
+        switch level {
+        case .info: return .secondary
+        case .exec: return .cyan
+        case .success: return .green
+        case .error: return .red
+        }
+    }
+
+    @ViewBuilder
+    private var toastView: some View {
+        if let toast = vm.actionToast {
+            HStack(spacing: 6) {
+                Image(systemName: toast.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(toast.success ? .green : .red)
+                Text(toast.text).font(.caption)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.ultraThickMaterial, in: Capsule())
+            .padding(.bottom, 60)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: vm.actionToast?.text)
         }
     }
 
@@ -236,15 +305,39 @@ struct DashboardView: View {
 
     private var actionBar: some View {
         HStack {
-            Button("Purge Cache") { showPurgeConfirm = true }
-            Button("Force Sync Log") { vm.forceSyncLog() }
-            Button("Optimise System") { vm.optimiseSystem() }
+            actionButton(title: "Purge Cache", running: .purgeCache, runningTitle: "Purging…") {
+                showPurgeConfirm = true
+            }
+            actionButton(title: "Force Sync Log", running: .forceSyncLog, runningTitle: "Syncing…") {
+                vm.forceSyncLog()
+            }
+            actionButton(title: "Optimise System", running: .optimiseSystem, runningTitle: "Optimising…") {
+                vm.optimiseSystem()
+            }
+            if vm.runningAction != nil {
+                Button("Vezi log") { vm.showActionConsole = true }
+                    .buttonStyle(.link).font(.caption)
+            }
             Spacer()
-            if let message = vm.lastActionMessage {
+            if let message = vm.lastActionMessage, vm.runningAction == nil {
                 Text(message).font(.caption).foregroundStyle(.secondary)
             }
             Button("Close Panel") { NSApp.keyWindow?.orderOut(nil) }
         }
+    }
+
+    @ViewBuilder
+    private func actionButton(title: String, running: RunningAction, runningTitle: String, action: @escaping () -> Void) -> some View {
+        let isRunning = vm.runningAction == running
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 5) {
+                if isRunning { ProgressView().controlSize(.small) }
+                Text(isRunning ? runningTitle : title)
+            }
+        }
+        .disabled(vm.runningAction != nil)
     }
 
     // MARK: - Helpers
