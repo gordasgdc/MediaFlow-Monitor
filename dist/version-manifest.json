@@ -1,0 +1,19 @@
+{
+  "_comment": "Schelet generic de auto-update \u2014 canal PRIVAT, f\u0103r\u0103 server real. Consumat local de aplica\u021bie pentru a compara versiunea instalat\u0103 cu cea din pachetul curent de test.",
+  "channel": "private-test",
+  "latestVersion": "1.0.0",
+  "minSupportedVersion": "1.0.0",
+  "releaseNotes": "Sprint 1: log engine pasiv, system metrics RAM/Swap, overlay + hotkey, localizare RO/EN/ES.",
+  "platforms": {
+    "macos": {
+      "version": "1.0.0",
+      "packageUrl": "dist/MediaFlowMonitor-macOS-1.0.0.zip",
+      "sha256": "03b8f96fcce65cefa83cefecddf7357347c7e409cc9b579e46109c9826063971"
+    },
+    "windows": {
+      "version": "1.0.0",
+      "packageUrl": "dist/MediaFlowMonitor-Windows-1.0.0.zip",
+      "sha256": null
+    }
+  }
+}

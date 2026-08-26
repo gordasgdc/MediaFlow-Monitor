@@ -11,3 +11,8 @@ obj/
 
 # Editor
 .vscode/
+
+# Build/release artifacts (regenerabile local via scripts/)
+/Build/
+/Publish/
+/dist/*.zip
