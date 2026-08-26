@@ -27,6 +27,10 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240311000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- PerformanceCounter a fost scos din .NET Core/5+ in namespace-ul de
+         baza si mutat intr-un pachet separat (forwarded type) - fara el,
+         SystemMetricsMonitor.cs nu compileaza (CS1069). -->
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
