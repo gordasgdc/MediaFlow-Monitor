@@ -42,13 +42,23 @@ MediaFlow-Monitor/
 ```
 
 ## Stare curentă
-- macOS: build local verificat ✅, localizare RO/EN/ES funcțională ✅.
-- Windows: skeleton scris, **neconstruit** (fără mediu Windows disponibil aici).
+- macOS: build local verificat ✅, semnat + notarizat Apple ✅, localizare RO/EN/ES ✅, licențiere + revocare Supabase ✅.
+- Windows: **build reușit** ✅ (2026-08-26, pe Parallels/Windows 11, VS 2026 + .NET 10 SDK) — `.exe` pornește, dar overlay-ul e invizibil (vezi TODO hotkey mai jos). Fără licențiere/update checker/VRAM încă.
+
+## Windows — pitfall de build cunoscut (rezolvat 2026-08-26)
+`dotnet publish` eșua cu `MSB4062: Microsoft.Build.Packaging.Pri.Tasks.ExpandPriContent could not be loaded` — DLL-ul există doar în instalarea Visual Studio (workload **WinUI application development**, redenumit față de vechiul "Universal Windows Platform development"), nu în folderul SDK-ului `dotnet` CLI. Fix (o singură dată, PowerShell ca Administrator):
+```powershell
+$src = "C:\Program Files\Microsoft Visual Studio\<VS-ver>\Community\MSBuild\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
+$dst = "C:\Program Files\dotnet\sdk\<SDK-ver>\Microsoft\VisualStudio\v<VS-ver>.0\AppxPackage"
+New-Item -ItemType Directory -Force -Path $dst | Out-Null
+Copy-Item "$src\*" $dst -Recurse -Force
+```
+`scripts/build-windows-exe.ps1` verifică acum automat prezența DLL-ului și avertizează dacă lipsește.
 
 ## TODO tehnice — fază de testare
-- [ ] **Windows**: conectare `WM_HOTKEY` la message pump-ul WinUI (necesită `HWND` dedicat prin `Win32Interop.GetWindowFromWindowHandle` sau fereastră de mesaje ascunsă).
-- [ ] **Windows**: primul build/test real pe mașină Windows (`dotnet build`), validare `PerformanceCounter` are drepturi de citire fără elevare.
-- [ ] **macOS**: implementare `VRAMProbe.swift` (IOKit `IOAccelerator` stats) — VRAM e `nil` momentan.
+- [ ] **Windows — CRITIC**: `WM_HOTKEY` nu ajunge nicăieri — `GlobalHotkey.RegisterHotKey` e apelat cu `hwnd=IntPtr.Zero` (mesaj de thread), dar WinUI3 nu rulează un `GetMessage`/`DispatchMessage` loop clasic peste care să-l intercepți. Rezultat confirmat: `.exe` pornește, dar Ctrl+Shift+M nu arată nimic — exact bug-ul deja reparat pe macOS (Automatic Termination), dar cu altă cauză. Necesită fereastră de mesaje ascunsă (`CreateWindowEx` + `WndProc` custom) sau folosirea unui `AppWindow`/`Win32Interop.GetWindowFromWindowHandle` real ca target al `RegisterHotKey`.
+- [ ] **Windows**: licențiere (LicenseCore/MachineID), Update Checker, VRAM, alerte DaVinci în UI — toate există doar pe macOS.
+- [ ] **macOS**: `Bypass FX` rămâne placeholder (necesită DaVinci Scripting API conectat).
 - [ ] **Ambele**: acțiuni reale pentru `[Purge Cache]` / `[Bypass FX]` (azi: placeholder, `suggestedAction = nil`).
 - [ ] **Ambele**: buton `[Reveal Cache Folder]` — cheie de localizare există, acțiune neimplementată.
 - [ ] Testare regex-uri de parsare log pe exemple reale de log DaVinci (formatele curente sunt presupuse, nevalidate pe fișiere reale).
