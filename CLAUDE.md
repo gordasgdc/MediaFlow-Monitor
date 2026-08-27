@@ -312,6 +312,32 @@ GDC viitoare (Mac și, unde tehnologia o permite, Windows):
   limitarea răspunderii "as is"). Utilizatorul trebuie să apese explicit
   "Agree"/"I accept" înainte ca instalarea să se finalizeze.
 
+  **[COMPLETARE 2026-08-27] Consimțământ obligatoriu (Consent Gate), nu
+  doar text afișat.** Nu e suficient ca licența să apară — pasul trebuie
+  să blocheze efectiv avansarea fără acceptare explicită:
+  - **macOS (`productbuild`/Distribution.xml).** Elementul `<license
+    file="License.txt" mime-type="text/plain"/>` din `Distribution.xml`
+    (deja folosit de `build_installer.sh` în `gdc-plugin-manager-catalog-vendor`
+    și `gdc-vault-mac`) e SUFICIENT — pagina nativă de licență a
+    installer-ului macOS oferă mereu doar "Agree"/"Disagree", iar
+    "Continue" nu apare fără "Agree" apăsat; nu există flag care s-o
+    ocolească. Regula practică: orice `Distribution.xml` nou generat
+    TREBUIE să păstreze elementul `<license>` — omiterea lui (ex. un
+    installer simplificat fără pas de licență) NU e acceptabilă.
+  - **Windows (Inno Setup).** Secțiunea `[Setup]` din `installer.iss`
+    TREBUIE să seteze `LicenseFile=license.txt` (sau `.rtf`) — Inno Setup
+    arată atunci nativ o pagină cu opțiunile radio "I accept the
+    agreement" / "I do not accept", cu butonul "Next" dezactivat până la
+    alegerea explicită "I accept". (Dacă vreun installer Windows ar trece
+    vreodată pe NSIS în loc de Inno Setup, echivalentul e
+    `!insertmacro MUI_PAGE_LICENSE` cu `MUI_LICENSEPAGE_CHECKBOX` definit,
+    pentru varianta cu bifă explicită.)
+  - Fișierul `license.txt`/`.rtf` folosit la acest pas trebuie să conțină
+    (măcar rezumat) cele 4 puncte cheie din Termeni: statut independent
+    (non-comercial), licențiere Machine ID, natura de donație a
+    susținerii, garanție "as is"/limitarea răspunderii — nu doar un MIT
+    License generic.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
