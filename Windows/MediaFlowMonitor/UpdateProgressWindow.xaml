@@ -1,0 +1,20 @@
+<Window x:Class="MediaFlowMonitor.UpdateProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Actualizare"
+        Width="380" SizeToContent="Height" MinWidth="380"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize">
+    <!-- Fereastra minimala de progres pentru self-update (2026-08-27) -
+         necesara explicit: aplicatia ruleaza doar in tray, fara fereastra
+         principala vizibila - fara asta userul n-ar vedea NIMIC cat timp
+         update-ul se descarca/instaleaza. -->
+    <StackPanel Margin="20,18">
+        <TextBlock x:Name="TitleText" FontSize="13" FontWeight="SemiBold" />
+        <TextBlock x:Name="StatusText" FontSize="11" Margin="0,6,0,12"
+                   Foreground="Gray" TextWrapping="Wrap" />
+        <ProgressBar IsIndeterminate="True" Height="4" />
+    </StackPanel>
+</Window>

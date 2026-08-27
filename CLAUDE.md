@@ -380,7 +380,32 @@ doar un link:
   versiunii noi** (pop-up, texte, dismissal) — doar acțiunea butonului
   principal se schimbă: NU mai deschide un link, cheamă Self-Updater-ul.
 
-**Status acest repo (2026-08-27): NEIMPLEMENTAT pe NICIO platformă — OBLIGATORIU la următoarea actualizare.** Mac are `UpdateChecker.swift` fără Self-Updater; Windows nu are NICIUN mecanism de update checker/self-update încă (verificat, lipsește complet). Portează ambele din `GDCVault`/`GDCVaultWin` (Mac) și `GDCPluginManagerWin`/`GDCVaultWin` (Windows).
+**Status acest repo (2026-08-27): IMPLEMENTAT pe Mac (publicat+verificat),
+scris dar NEVERIFICAT REAL pe Windows.**
+- **Mac**: `SelfUpdater.swift` (nou, port 1:1) — `UpdateChecker.swift`
+  citește URL-ul `.pkg` direct din `update.json.download_url.mac`
+  (deja stabil, `releases/latest/download/MediaFlowMonitor.pkg`), nu mai
+  trebuie să caute în `assets[]` API-ului GitHub (spre deosebire de
+  GDCVault/CGConvertor/CursorPro, care nu au un `update.json` propriu).
+  Publicat real: `v1.8.0`, semnat+notarizat+staplat, urcat pe release-ul
+  unic `v1.0.0` (`gh release upload --clobber`), `update.json` sincronizat
+  pe `gordas.dev`. Verificat `releases/latest/download/MediaFlowMonitor.pkg`
+  → HTTP 200.
+- **Windows**: `UpdateChecker.cs`+`SelfUpdater.cs`+`UpdateProgressWindow.xaml(.cs)`
+  (toate noi — PRIMA implementare de update checker pe Windows pentru
+  acest proiect, lipsea complet) — citește ACELAȘI `update.json`, meniu
+  tray nou "Cauta actualizari...". `EnableWindowsTargeting=true` adăugat
+  în `.csproj` (lipsea, singurul din ecosistem fără el) — compilare
+  cross-platform reușită pe Mac (`dotnet build -r win-x64
+  --self-contained false`, XAML→BAML inclus). **NEVERIFICAT REAL**: acest
+  repo NU are niciun workflow CI Windows (`build-windows.yml` lipsește
+  complet, spre deosebire de GDCVaultWin/GDCPluginManagerWin/CGConvertor)
+  — build-urile Windows anterioare (`MediaFlowMonitorSetup-x64-1.7.0.exe`
+  etc.) par produse manual de Cristi (probabil pe Parallels, per jurnalul
+  Windows mai jos). **Nu am putut construi/publica un `.exe` real v1.8.0**
+  — Cristi trebuie fie să compileze manual pe Windows (`dotnet publish` +
+  `installer.iss`) și să urce assetul, fie să ceară adăugarea unui
+  workflow CI (port al celui din `GDCVaultWin`).
 
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
