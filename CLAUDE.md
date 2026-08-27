@@ -395,17 +395,27 @@ scris dar NEVERIFICAT REAL pe Windows.**
   (toate noi — PRIMA implementare de update checker pe Windows pentru
   acest proiect, lipsea complet) — citește ACELAȘI `update.json`, meniu
   tray nou "Cauta actualizari...". `EnableWindowsTargeting=true` adăugat
-  în `.csproj` (lipsea, singurul din ecosistem fără el) — compilare
-  cross-platform reușită pe Mac (`dotnet build -r win-x64
-  --self-contained false`, XAML→BAML inclus). **NEVERIFICAT REAL**: acest
-  repo NU are niciun workflow CI Windows (`build-windows.yml` lipsește
-  complet, spre deosebire de GDCVaultWin/GDCPluginManagerWin/CGConvertor)
-  — build-urile Windows anterioare (`MediaFlowMonitorSetup-x64-1.7.0.exe`
-  etc.) par produse manual de Cristi (probabil pe Parallels, per jurnalul
-  Windows mai jos). **Nu am putut construi/publica un `.exe` real v1.8.0**
-  — Cristi trebuie fie să compileze manual pe Windows (`dotnet publish` +
-  `installer.iss`) și să urce assetul, fie să ceară adăugarea unui
-  workflow CI (port al celui din `GDCVaultWin`).
+  în `.csproj` (lipsea, singurul din ecosistem fără el).
+
+**[COMPLETARE 2026-08-27] CI Windows real adăugat** — cerut explicit de
+Cristi: *"nu vreau să fie nevoie tot timpul să rulez pe o mașină
+Windows"*. `.github/workflows/build-windows.yml` (nou) — port 1:1 al
+rețetei deja verificate manual în `scripts/build-windows-exe.ps1`, rulat
+acum automat pe `windows-latest` la fiecare push pe `main` (+ manual din
+Actions), matrix pe `[x64, arm64]`: `dotnet publish` self-contained →
+copiază `gdc-manifest.json`+iconițe → Inno Setup → artefact descărcabil
+(`MediaFlowMonitorSetup-<arch>[-<versiune>].exe`, ambele nume, versionat +
+stabil). **Verificat REAL, nu doar compilare** — rulare
+`33052296749`, ambele arhitecturi, toate etapele verzi, inclusiv
+XAML→BAML. Publicat manual (`gh release upload v1.0.0 ... --clobber`,
+la fel ca fluxul Mac — acest repo NU auto-creează un release nou per tag,
+folosește un singur release perpetuu `v1.0.0`) — 4 asset-uri noi
+(`MediaFlowMonitorSetup-x64[-1.8.0].exe`,
+`MediaFlowMonitorSetup-arm64[-1.8.0].exe`), verificat
+`releases/latest/download/MediaFlowMonitorSetup-x64.exe` → HTTP 200.
+**De-acum înainte, orice modificare de cod pe Windows pentru acest repo
+se verifică automat prin acest CI — nu mai e nevoie de o mașină Windows
+reală decât pentru testul manual final de instalare/rulare.**
 
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
