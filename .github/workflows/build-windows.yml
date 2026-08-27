@@ -1,0 +1,77 @@
+name: Build MediaFlow Monitor (Windows)
+
+# CI Windows real pentru acest repo — lipsea complet până acum (spre
+# deosebire de GDCVaultWin/GDCPluginManagerWin/CGConvertor). Motiv cerut
+# explicit de Cristi (2026-08-27): "nu se poate face pe GitHub... nu vreau
+# să fie nevoie tot timpul să rulez pe o mașină Windows". Port 1:1 al
+# rețetei deja verificate manual (`scripts/build-windows-exe.ps1`), doar
+# rulată automat pe `windows-latest` — `dotnet build`/`publish` de pe Mac
+# NU compilează XAML->BAML (PresentationBuildTasks e Windows-only), deci
+# ăsta rămâne SINGURUL loc unde XAML-ul chiar e verificat real.
+#
+# Doar build + artefact descărcabil aici — acest repo NU creează un
+# release nou per tag (spre deosebire de CGConvertor/gdc-production-manager):
+# folosește un SINGUR release perpetuu (`v1.0.0`, "latest"), cu toate
+# versiunile acumulate ca asset-uri (`gh release upload v1.0.0 ... --clobber`,
+# la fel ca pe Mac — vezi jurnalul de release din CLAUDE.md). Publicarea
+# efectivă pe acel release rămâne un pas manual (`gh release upload`),
+# după ce artefactul de aici e verificat.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - name: Descarca codul din repo
+        uses: actions/checkout@v4
+
+      - name: Instaleaza .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Compileaza MediaFlowMonitor.csproj (verifica XAML/BAML real)
+        run: dotnet build Windows\MediaFlowMonitor\MediaFlowMonitor.csproj -c Release
+
+      - name: Publica exe-ul (self-contained, win-${{ matrix.arch }})
+        run: dotnet publish Windows\MediaFlowMonitor\MediaFlowMonitor.csproj -c Release -r win-${{ matrix.arch }} --self-contained true -p:PublishSingleFile=false -o Publish\Windows\win-${{ matrix.arch }}
+
+      - name: Citeste versiunea din .csproj (Regula 14 - sursa unica de adevar)
+        id: version
+        shell: pwsh
+        run: |
+          $v = (dotnet msbuild Windows\MediaFlowMonitor\MediaFlowMonitor.csproj -getProperty:Version).Trim()
+          if ([string]::IsNullOrWhiteSpace($v)) { $v = "0.0.0" }
+          echo "value=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Copiaza manifestul GDC + iconita in outputul de publish
+        shell: pwsh
+        run: |
+          Copy-Item gdc-manifest.json Publish\Windows\win-${{ matrix.arch }} -Force
+          New-Item -ItemType Directory -Force -Path Publish\Windows\win-${{ matrix.arch }}\Resources\GDC | Out-Null
+          Copy-Item Resources\GDC\gdc-icon.png Publish\Windows\win-${{ matrix.arch }}\Resources\GDC -Force
+          Copy-Item Resources\GDC\gdc-icon.ico Publish\Windows\win-${{ matrix.arch }}\Resources\GDC -Force
+
+      - name: Compileaza instalatorul (Inno Setup - preinstalat pe runner-ul windows-latest)
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppArch=${{ matrix.arch }} /DMyAppVersion=${{ steps.version.outputs.value }} Windows\installer.iss
+
+      - name: Creeaza copia STABILA (fara versiune in nume, pt. releases/latest/download)
+        shell: pwsh
+        run: |
+          Copy-Item "dist\MediaFlowMonitorSetup-${{ matrix.arch }}-${{ steps.version.outputs.value }}.exe" "dist\MediaFlowMonitorSetup-${{ matrix.arch }}.exe" -Force
+
+      - name: Incarca instalatorul ca artefact descarcabil
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: MediaFlowMonitor-Windows-${{ matrix.arch }}
+          path: |
+            dist\MediaFlowMonitorSetup-${{ matrix.arch }}-${{ steps.version.outputs.value }}.exe
+            dist\MediaFlowMonitorSetup-${{ matrix.arch }}.exe
