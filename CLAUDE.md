@@ -288,6 +288,30 @@ GDC viitoare (Mac și, unde tehnologia o permite, Windows):
   aplicație nouă îl respectă de la prima versiune publicată, nu "adăugat
   ulterior quando there's time".
 
+**19. Regulă Legală & Packaging (UE/Global) (2026-08-27).**
+- **Pagini Web.** Orice landing page nouă sau actualizare de site publicată
+  pe `gordas.dev` (sau pe orice site GDC, inclusiv paginile de proiect
+  `gordasgdc.github.io/<repo>`) TREBUIE să conțină în footer link-uri către
+  `https://gordas.dev/termeni` (Termeni și Condiții),
+  `https://gordas.dev/confidentialitate` (Politică de Confidențialitate
+  GDPR) și, unde e relevant, `https://gordas.dev/cookie` (Cookie-uri),
+  plus o notă scurtă de statut: *"gordas.dev este o platformă administrată
+  de dezvoltatori independenți. Aplicațiile și resursele sunt furnizate ca
+  atare (AS IS), iar susținerea proiectului se bazează pe contribuții
+  opționale de sprijin și donații."* Sursa canonică a acestor 3 pagini
+  legale trăiește în `gdc-plugin-manager-catalog-vendor/docs/` — orice alt
+  site GDC linkuiește către ele (absolut), nu le duplică.
+- **Installere (.pkg macOS / .exe Windows).** Începând cu următoarele
+  versiuni/build-uri (NU retroactiv — fără rebuild al aplicațiilor deja
+  publicate doar pentru asta), scripturile de instalare
+  (`build_installer.sh`/`productbuild` pe Mac, `installer.iss`/Inno Setup
+  pe Windows) TREBUIE să includă un pas de acceptare a licenței (License
+  Agreement/SLA), bazat pe un fișier `license.rtf`/`license.txt` cu un
+  extras din Termeni și Condiții (statut de proiect independent,
+  licențiere legată de Machine ID, natura de donație a susținerii,
+  limitarea răspunderii "as is"). Utilizatorul trebuie să apese explicit
+  "Agree"/"I accept" înainte ca instalarea să se finalizeze.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
