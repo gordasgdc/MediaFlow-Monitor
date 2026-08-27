@@ -9,10 +9,16 @@
          pe .NET simplu, fara MSIX/PRI/bootstrap WinRT, testat si stabil
          de ani de zile prin `dotnet publish` simplu. -->
     <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Permite dotnet restore/build sa rezolve TFM-ul windows si de pe
+         macOS (vezi acelasi comentariu in GDCVaultWin/GDCPluginManagerWin)
+         - util pentru verificare sintactica locala; NU inlocuieste un
+         build real pe Windows (XAML->BAML) - fara CI Windows, verificarea
+         ramane manuala/vizuala inainte de orice release. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <!-- Versiune Windows independentă de cea de pe Mac (fiecare platformă
          are propriul câmp în dist/version-manifest.json) — bump manual la
          fiecare release, sincron cu Windows/installer.iss (Regula 14). -->
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
     <RootNamespace>MediaFlowMonitor</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWPF>true</UseWPF>

@@ -55,6 +55,8 @@ public partial class App : Application
 
             _hotkey = new GlobalHotkey(modifiers: HotkeyModifiers.Control | HotkeyModifiers.Shift, key: 0x4D /* 'M' */);
             _hotkey.Pressed += (_, _) => _overlay.Toggle();
+
+            _ = CheckForUpdatesAsync(silent: true);
         }
         catch (Exception ex)
         {
@@ -74,6 +76,8 @@ public partial class App : Application
         menu.Items.Add($"Machine ID: {_license?.MachineIDDisplay}", null, (_, _) => CopyMachineID());
         menu.Items.Add("Activeaza licenta (WhatsApp)...", null, (_, _) => OpenWhatsAppActivation());
         menu.Items.Add("Introdu codul de activare...", null, (_, _) => PromptActivationCode());
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Cauta actualizari...", null, (_, _) => _ = CheckForUpdatesAsync(silent: false));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Iesire", null, (_, _) => Shutdown());
 
@@ -140,6 +144,80 @@ public partial class App : Application
         {
             System.Windows.MessageBox.Show(ActivationErrorText(error.Value),
                 "Activare esuata", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    /// Oglinda checkAtLaunch()/checkManually() din UpdateChecker.swift (Mac)
+    /// — citește ACELAȘI update.json. `silent`: true la lansare (tăcut
+    /// dacă nu e nimic nou sau versiunea a fost deja închisă), false la
+    /// click manual din tray (arată mereu rezultatul real).
+    private async Task CheckForUpdatesAsync(bool silent)
+    {
+        UpdateInfo? info;
+        try
+        {
+            info = await UpdateChecker.FetchAsync();
+        }
+        catch (Exception ex)
+        {
+            if (!silent)
+            {
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show(
+                    $"Nu am putut verifica actualizări: {ex.Message}\n\nVerifică-ți conexiunea la internet și încearcă din nou.",
+                    "Verificare eșuată", MessageBoxButton.OK, MessageBoxImage.Warning));
+            }
+            return;
+        }
+
+        if (info is null)
+        {
+            if (!silent)
+            {
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show(
+                    "Nu am putut verifica actualizări — răspuns invalid de la server.",
+                    "Verificare eșuată", MessageBoxButton.OK, MessageBoxImage.Warning));
+            }
+            return;
+        }
+
+        if (!UpdateChecker.IsNewer(info.Version, UpdateChecker.CurrentVersion))
+        {
+            if (!silent)
+            {
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show(
+                    "Rulezi cea mai recentă versiune.", "Ești la zi", MessageBoxButton.OK, MessageBoxImage.Information));
+            }
+            return;
+        }
+
+        if (silent && UpdateChecker.WasDismissed(info.Version) && !info.Mandatory) return;
+
+        Dispatcher.Invoke(() => PresentUpdatePopup(info));
+    }
+
+    /// BUG FIX 2026-08-27 (CLAUDE.md Partea 1, Regula 20): prima
+    /// implementare de update checker pe Windows pentru acest proiect —
+    /// lipsea complet. "Actualizează acum" descarcă+lansează installer-ul
+    /// direct, prin SelfUpdater, NICIODATĂ prin browser/GitHub.
+    private void PresentUpdatePopup(UpdateInfo info)
+    {
+        var body = (info.Changes ?? "") + "\n\nApasă „Actualizează acum” pentru a descărca și instala automat.";
+        var result = System.Windows.MessageBox.Show(
+            $"Versiune nouă disponibilă: {info.Version}\n\n{body}",
+            "Actualizare disponibilă",
+            info.Mandatory ? MessageBoxButton.OK : MessageBoxButton.OKCancel,
+            MessageBoxImage.Information);
+
+        if (result == MessageBoxResult.OK)
+        {
+            if (info.DownloadUrl.TryGetValue("windows", out var url) && !string.IsNullOrWhiteSpace(url))
+            {
+                _ = SelfUpdater.DownloadAndInstallAsync(url, info.Version);
+            }
+        }
+        else
+        {
+            UpdateChecker.MarkDismissed(info.Version);
         }
     }
 

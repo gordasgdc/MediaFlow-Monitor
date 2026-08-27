@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.7.0",
+  "latestVersion": "1.8.0",
   "minSupportedVersion": "1.0.0",
   "releaseNotes": "v1.7.0: Top RAM/Swap Consumers in System Health, Log Decoder Pro (filtre Errors/Warnings/Render Events, Pause/Resume, Export Log, highlight cuvinte cheie), Open Cache Folder, Copy Diagnostics, Force Close Hanging DaVinci, alerte native (swap ridicat, disk cache scazut).",
   "platforms": {
     "macos": {
-      "version": "1.7.0",
-      "packageUrl": "dist/MediaFlowMonitor-1.7.0.pkg",
-      "sha256": "2ebf9d40a38f8b634b9211428323ebf6b33c22d6ff7bf248cebe1007b4982d73"
+      "version": "1.8.0",
+      "packageUrl": "dist/MediaFlowMonitor-1.8.0.pkg",
+      "sha256": "436b7878fe04d6f98c0e2eda14a5135d2a27b8c7f0827c5bd9b7679e426d174e"
     },
     "windows": {
       "version": "1.7.0",

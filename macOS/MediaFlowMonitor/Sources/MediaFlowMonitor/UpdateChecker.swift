@@ -130,17 +130,21 @@ final class UpdateChecker {
         return 0
     }
 
+    /// BUG FIX 2026-08-27 (CLAUDE.md Partea 1, Regula 20): butonul
+    /// "Actualizează acum" deschidea `.pkg`-ul în browser (fișier descărcat,
+    /// dar userul tot vedea un tab de download) — acum descarcă+instalează
+    /// direct, prin SelfUpdater, fără NICIODATĂ să atingă un browser.
     private func presentPopup(_ info: UpdateInfo) {
         let alert = NSAlert()
         alert.messageText = "Versiune nouă disponibilă: \(info.version)"
-        alert.informativeText = (info.changes ?? "") + "\n\nTrebuie să descarci pachetul nou și să îl instalezi peste versiunea actuală — nu e o actualizare automată în fundal."
+        alert.informativeText = (info.changes ?? "") + "\n\nApasă „Actualizează acum” pentru a descărca și instala automat."
         alert.addButton(withTitle: "Actualizează acum")
         if !info.mandatory {
             alert.addButton(withTitle: "Mai târziu")
         }
         let response = alert.runModal()
         if response == .alertFirstButtonReturn, let urlString = info.download_url["mac"], let url = URL(string: urlString) {
-            NSWorkspace.shared.open(url)
+            Task { await SelfUpdater.downloadAndInstall(pkgURL: url, version: info.version) }
         } else {
             UserDefaults.standard.set(info.version, forKey: dismissedKey)
         }
