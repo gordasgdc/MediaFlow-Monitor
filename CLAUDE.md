@@ -338,6 +338,50 @@ GDC viitoare (Mac și, unde tehnologia o permite, Windows):
     susținerii, garanție "as is"/limitarea răspunderii — nu doar un MIT
     License generic.
 
+**20. Self-Updater real — obligatoriu, niciodată deschidere de browser/
+GitHub (2026-08-27).** Descoperit ca bug real, repetat, pe GDC Vault (Mac
+și Windows): un simplu link `releases/latest/download/...` deschis în
+browser NU e suficient — utilizatorul tot ajunge pe un tab de
+browser/GitHub, ceea ce Cristi consideră inacceptabil ("clientul niciodată
+nu trebuie să vadă GitHub"). Orice aplicație desktop GDC (Mac/Windows) cu
+proces propriu de rulat TREBUIE să implementeze un Self-Updater REAL, nu
+doar un link:
+- **Mac.** Descarcă `.pkg`-ul cu `URLSession.download`, cu URL-ul citit
+  direct din `assets[]` al ultimului release GitHub (nu hardcodat), apoi
+  îl instalează printr-un script bash elevat cu `osascript ... with
+  administrator privileges` (promptul NATIV de parolă admin macOS —
+  NICIODATĂ `sudo` interactiv sau Terminal vizibil), care rulează
+  `installer -pkg ... -target /` și relansează aplicația singur. Vezi
+  implementarea de referință `SelfUpdater.swift` (DataMover,
+  `gdc-plugin-manager-catalog-vendor`, `GDCVault`).
+- **Windows.** Descarcă installer-ul (`.exe`) cu `HttpClient` direct pe
+  disc, redenumit cu versiunea (Regula 17), apoi îl lansează
+  (`Process.Start(UseShellExecute:true)`) — fereastra NATIVĂ Inno Setup
+  apare, NICIODATĂ browserul. Aplicația curentă se închide
+  (`Application.Current.Shutdown()`) înainte ca userul să ajungă la pasul
+  de copiere din wizard; `[Run] ... Flags: nowait postinstall
+  skipifsilent` din `installer.iss` relansează aplicația după instalare —
+  nu e nevoie de `AppMutex`/`CloseApplications` suplimentar. Vezi
+  `SelfUpdater.cs` (`GDCPluginManagerWin`, `GDCVaultWin`).
+- O fereastră minimală de progres (`UpdateProgressWindow`, text + spinner
+  indeterminat) e obligatorie cât timp durează descărcarea/instalarea —
+  userul nu trebuie să creadă că aplicația a înghețat.
+- **WARNING permanent**: pasul efectiv de instalare (promptul de parolă
+  admin pe Mac, wizardul Inno pe Windows) NU poate fi verificat automat de
+  Claude — cere interacțiune fizică reală cu fereastra de sistem.
+  Verificarea automată se oprește la "fișierul s-a descărcat integru,
+  HTTP 200" — instalarea + relansarea efectivă TREBUIE confirmată manual,
+  o dată, de Cristi, înainte ca fluxul să fie declarat complet dovedit.
+- **Excepție arhitecturală, nu o abatere**: aplicații FĂRĂ proces propriu
+  de rulat (plugin-uri încărcate de o gazdă terță, ex. un IOPlugin
+  DaVinci Resolve) nu pot avea un "self-updater" în acest sens — rămân la
+  reinstalare manuală ghidată de PDF (Regula 8), fără relansare automată.
+- **Regula 13 (Update Checker) rămâne valabilă pentru DETECTAREA
+  versiunii noi** (pop-up, texte, dismissal) — doar acțiunea butonului
+  principal se schimbă: NU mai deschide un link, cheamă Self-Updater-ul.
+
+**Status acest repo (2026-08-27): NEIMPLEMENTAT pe NICIO platformă — OBLIGATORIU la următoarea actualizare.** Mac are `UpdateChecker.swift` fără Self-Updater; Windows nu are NICIUN mecanism de update checker/self-update încă (verificat, lipsește complet). Portează ambele din `GDCVault`/`GDCVaultWin` (Mac) și `GDCPluginManagerWin`/`GDCVaultWin` (Windows).
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
