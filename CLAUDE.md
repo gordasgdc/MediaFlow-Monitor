@@ -417,6 +417,119 @@ folosește un singur release perpetuu `v1.0.0`) — 4 asset-uri noi
 se verifică automat prin acest CI — nu mai e nevoie de o mașină Windows
 reală decât pentru testul manual final de instalare/rulare.**
 
+
+**21. Memory & I/O Performance — obligatoriu pentru orice aplicatie care
+proceseaza date/fisiere/fluxuri mari (2026-08-27).** Descoperit ca bug real
+pe DataMover: un transfer de 3 TB (SSD -> HDD) umplea RAM + swap pana la
+eroarea nativa macOS "Your system has run out of application memory".
+Cauza radacina reala pe Mac (Swift/DataMoverMac): bucla de citire/scriere
+in bucati (`FileHandle.read(upToCount:)`) rula pe un thread de fundal FARA
+`autoreleasepool` per iteratie — obiectele Objective-C (`NSData`) din
+spatele fiecarui `Data` bridge-uit nu se eliberau decat la finalul
+INTREGULUI job (GCD creeaza un autorelease pool per bloc dispatch-uit, nu
+per iteratie de bucla), deci memoria temporara se acumula neintrerupt pe
+toata durata copierii unui fisier urias sau a unui transfer intreg.
+Regula, valabila pentru orice aplicatie GDC (Mac/Windows) care citeste,
+scrie, copiaza sau proceseaza fisiere/fluxuri de retea/date mari:
+
+- **Zero acumulare in memorie / streaming intai.** Interzisa incarcarea
+  completa a unui fisier/array/raspuns de retea mare in RAM (fara
+  `Data(contentsOf:)`, `file.read()` fara argument, `shutil.copy2` pe
+  fisiere mari, liste Python/array-uri Swift care colecteaza TOATE
+  intrarile unei scanari mari). Orice citire/scriere/procesare foloseste
+  un buffer FIX, mic (8-32 MB implicit, configurabil - vezi mai jos), care
+  se citeste, se scrie si se elibereaza pe rand.
+- **Backpressure.** Daca rata de citire/procesare depaseste rata de
+  scriere/iesire (SSD -> HDD, retea lenta etc.), cititorul TREBUIE sa se
+  incetineasca (citire sincrona, secvential cu scrierea - fara buffer de
+  "read-ahead" care ar acumula date nescrise in RAM), NU sa stocheze
+  diferenta in memorie/swap. Daca aplicatia are un plafon de memorie
+  configurat (vezi mai jos) si il depaseste, face o pauza scurta intre
+  fisiere/blocuri pana cand memoria scade, in loc sa continue orbeste.
+- **UI & State Throttling.** Interzisa pastrarea in starea aplicatiei
+  (RAM) a TUTUROR obiectelor procesate pentru afisare — un istoric/log de
+  sute de mii de intrari intr-un `tk.Text`/`NSTextView`/array `@Published`
+  neplafonat e o scurgere de memorie reala, nu doar o "UI mare". UI-ul
+  primeste doar: contoare agregate (fisiere procesate, bytes transferati,
+  viteza curenta) si o fereastra plafonata cu ultimele N evenimente (ex.
+  200 de linii) — restul, daca trebuie pastrat, se scrie INCREMENTAL pe
+  disc (CSV/log file), nu se tine intr-o lista in memorie pana la final.
+  La fel, un raport final (PDF/CSV) nu tine in RAM randul fiecarui fisier
+  dintr-un transfer urias doar ca sa-l scrie o singura data la sfarsit -
+  CSV-ul se scrie incremental, iar un PDF/raport vizual pastreaza doar un
+  esantion plafonat (plus toate erorile).
+- **Scanare/recursivitate fara memorie acumulata.** La enumerarea
+  recursiva a unui folder mare, nu se construieste o lista/array cu TOATE
+  intrarile deodata daca sursa poate avea sute de mii/milioane de fisiere
+  — se foloseste un iterator/generator sau o scriere incrementala pe disc
+  (manifest), citit apoi in loturi (batch de 500-1000), ca memoria de varf
+  sa ramana plafonata indiferent de dimensiunea sursei.
+- **Auto-Release & eliberare explicita in bucle mari.** Pe macOS/Swift,
+  orice bucla `while`/`for` care citeste/scrie/proceseaza fisiere mari pe
+  un thread de fundal (`DispatchQueue.global`) foloseste `autoreleasepool { }`
+  EXPLICIT per iteratie — GCD NU dreneaza automat un pool intre iteratiile
+  unei bucle sincrone in interiorul unui singur bloc dispatch-uit. Pe
+  Python/alte platforme, echivalentul e eliberarea explicita a
+  buffer-elor/resurselor unmanaged (context manageri `with`, `close()`
+  explicit) - nu te baza pe garbage collection amanata pentru resurse care
+  cresc proportional cu volumul de date procesat.
+- **Resource Limits & configurabilitate.** Orice aplicatie care proceseaza
+  volume mari de date expune in Setari: (a) dimensiunea buffer-ului de
+  citire/scriere (ex. 4/8/16/32/64 MB, implicit 8 MB), si (b) un plafon
+  orientativ de memorie a aplicatiei (ex. 512 MB / 1 GB / 2 GB / 4 GB /
+  fara limita), peste care se aplica backpressure-ul descris mai sus.
+  Plafonul e o limita ORIENTATIVA la nivel de proces (nu un cgroup impus
+  de OS) - scopul e sa incetineasca sursa cand memoria creste anormal, nu
+  sa garanteze un maxim absolut.
+- **Implementare de referinta**: `DataMover` — `IOSettings.swift` +
+  fix-ul de `autoreleasepool` din `copyFileCancelable`/`genericHash`
+  (`OffloadEngine.swift`, Mac), si `core/io_settings.py` +
+  `scan_files_streaming`/`iter_manifest_batches` + raport CSV incremental
+  (`core/offload_engine.py`, Windows/Python). Orice aplicatie GDC noua sau
+  modificata care atinge fisiere/fluxuri mari respecta acest standard de
+  la urmatoarea ei actualizare, nu doar DataMover.
+
+**Status acest repo (2026-08-28, verificat): NU SE APLICA.** Auditat la cererea lui Cristi — MediaFlow Monitor citeste loguri/metrici de sistem si monitorizeaza procese DaVinci Resolve, nu copiaza/transfera el insusi fisiere media. Regula 21 nu se aplica decat daca se adauga vreodata o functie proprie de export/copiere de fisiere media.
+
+**22. `PlatformTarget` explicit obligatoriu pentru orice proiect .NET/WPF cu
+pachete NuGet native (2026-08-28).** Gasit pe DataMover (client WPF): un
+`.csproj` implicit "Any CPU" ruleaza, pe host-ul Windows al lui Cristi
+(Parallels pe Mac Apple Silicon), ca `win-arm64` - iar biblioteci cu
+binare native (QuestPDF/Skia, si potential altele similare) NU au build
+pentru arhitectura asta, cazand tacut cu `DllNotFoundException`/
+`TypeInitializationException` doar la runtime, niciodata la `dotnet build`.
+Orice `.csproj` nou (sau existent, la prima dependinta nativa adaugata) din
+`GDCVaultWin`/`GDCPluginManagerWin`/`DataMover`/orice client Windows viitor
+seteaza explicit `<PlatformTarget>x64</PlatformTarget>` - Windows 11 ARM
+ruleaza procesul x64 prin emulatie nativa a OS-ului, deci functioneaza
+identic pe Windows x64 real si pe ARM64/Parallels. Nu te baza pe "Any CPU"
+doar pentru ca merge la compilare.
+
+**23. Garda obligatorie impotriva `dist/` detinut de root, in orice
+`build_app.sh` Mac (2026-08-28).** Bug real, repetat de mai multe ori pe
+DataMover in aceeasi sesiune (cauza exacta neconfirmata - posibil o
+instalare de test cu `sudo installer -pkg ... -target /` care a atins
+accidental folderul local): `dist/<App>.app` ramas detinut de `root:wheel`
+dintr-un build anterior face ca `rm -rf "dist"` de la inceputul scriptului
+sa esueze partial, tacut, cu o gramada de "Permission denied" greu de
+gasit in mijlocul unui log lung. Orice `build_app.sh` din ecosistem
+(DataMover, GDCVault, CursorPro, gdc-plugin-manager-catalog-vendor, orice
+build Mac viitor) verifica ACEST lucru explicit INAINTE de `rm -rf`, cu un
+mesaj clar si actionabil (`sudo rm -rf $(pwd)/dist`, de rulat manual O
+SINGURA DATA de Cristi - Claude nu poate rula `sudo`), in loc sa lase
+`rm -rf` sa esueze criptic:
+\`\`\`bash
+if [ -d "dist" ] && ! [ -w "dist" ] || find dist -maxdepth 2 -user root -print -quit 2>/dev/null | grep -q .; then
+    echo "EROARE: 'dist/' contine fisiere detinute de root. Ruleaza manual:" >&2
+    echo "    sudo rm -rf \$(pwd)/dist" >&2
+    exit 1
+fi
+\`\`\`
+Practic, inaintea oricarui `release.sh`: `ls -la mac-native/dist` (listare
+COMPLETA, nu trunchiata cu `head`) - o listare trunchiata poate rata
+`<App>.app` daca sorteaza dupa alte fisiere (`.pkg`/`.zip`), dand o
+verificare falsa de "curat".
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
