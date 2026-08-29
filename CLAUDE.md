@@ -530,6 +530,42 @@ COMPLETA, nu trunchiata cu `head`) - o listare trunchiata poate rata
 `<App>.app` daca sorteaza dupa alte fisiere (`.pkg`/`.zip`), dand o
 verificare falsa de "curat".
 
+**24. Standard UI obligatoriu: Setare explicită "Mărime Text" + Layout
+robust la redimensionare (2026-08-29).** Completare la Regula 18 — găsit pe
+GDC Plugin Manager (Mac): un bug real de layout la resize RAPID al
+ferestrei (blocul de profil/footer din sidebar rămânea temporar suprapus
+peste conținutul de deasupra) cauzat de `.safeAreaInset(edge:)` atașat
+DIRECT pe un `List`/`ScrollView` — la resize rapid pe macOS, content-insetul
+intern al listei nu se resincronizează mereu instant cu safe-area-ul
+suprapus (bug de sincronizare AppKit/SwiftUI, nu o presupunere). Regulă
+practică, valabilă pentru orice fereastră GDC (Mac/Windows) cu o zonă
+fixă (footer/header) lângă o listă/grid scrollabilă:
+- **Niciodată `.safeAreaInset` direct pe un `List`/`ScrollView` pentru un
+  element care trebuie să rămână mereu vizibil și nesuprapus** — pune
+  lista și elementul fix ca FRAȚI într-un `VStack`/`Grid` simplu (cu
+  `Divider()` între ele, dacă are sens vizual). Layout-ul calculat direct
+  de container e mereu sincron, cadru cu cadru, spre deosebire de
+  safe-area-ul suprapus peste scroll.
+- **Fereastra principală rămâne liber redimensionabilă** (Regula 18), dar
+  cu `minWidth`/`minHeight` verificate să nu lase conținutul ilizibil sub
+  acel prag — nu doar prezente, ci suficient de generoase pentru sidebar-ul
+  cu cele mai multe secțiuni al aplicației respective.
+- **Setare explicită "Mărime Text" (Mic/Normal/Mare/Foarte mare) e acum
+  standard**, alături de selectorul de temă din Regula 18 — pe SwiftUI/Mac,
+  prin infrastructura NATIVĂ de accesibilitate (`dynamicTypeSize()` aplicat
+  la rădăcina ferestrei principale, NU un multiplicator brut de font — text
+  semantic (`.font(.headline)`/`.caption`/etc) + `dynamicTypeSize` garantează
+  reflow corect, spre deosebire de o scalare custom care poate tăia conținut
+  în frame-uri fixe). Pe Windows/WPF, echivalentul e un `FontSizeConverter`/
+  resursă de `FontSize` global legată de o setare persistată (`Registry`/JSON),
+  aplicată la nivelul `Application.Resources`. Persistat local, aplicat
+  imediat, fără repornire — la fel ca selectorul de temă.
+- Referință de implementare: `TextScalePreference`/`TextScaleManager`
+  (`Sources/GDCPluginManagerCore/AppTheme.swift`, `gdc-plugin-manager-catalog-vendor`)
+  + restructurarea `NavigationSplitView`/`List` din `ContentView.swift`
+  (același repo) — port-ul pe orice altă aplicație GDC (Mac/Windows) cu
+  panou lateral fix trebuie verificat la fel pentru acest pattern.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
