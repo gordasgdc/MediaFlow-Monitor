@@ -566,6 +566,30 @@ fixă (footer/header) lângă o listă/grid scrollabilă:
   (același repo) — port-ul pe orice altă aplicație GDC (Mac/Windows) cu
   panou lateral fix trebuie verificat la fel pentru acest pattern.
 
+**25. `CHANGELOG.md` obligatoriu la fiecare bump de versiune + Log de
+Diagnostic permanent, nu print-uri temporare (2026-08-29).**
+- **`CHANGELOG.md`** (rădăcina fiecărui repo) — separat de jurnalul tehnic
+  detaliat din acest fișier (CLAUDE.md păstrează deciziile/motivele/
+  pitfall-urile complete; `CHANGELOG.md` e un rezumat SCURT, orientat spre
+  ce s-a schimbat pentru utilizator, o intrare per versiune/dată, ușor de
+  scanat rapid fără să citești tot jurnalul). Actualizează-l în ACELAȘI
+  commit ca bump-ul de versiune — la fel de obligatoriu ca bump-ul însuși.
+  Dacă repo-ul nu are încă `CHANGELOG.md`, creează-l la prima actualizare
+  viitoare (nu aștepta o cerere explicită).
+- **Log de Diagnostic PERMANENT** (`DiagnosticLog.write(tag:, message:)` —
+  Mac: `GDCPluginManagerCore/DiagnosticLog.swift`, `%TEMP%/gdcpm-crash.log`;
+  Windows: `DiagnosticLog.cs`, echivalent) — pentru orice flux nou cu
+  potențial de eșec silențios (fetch de rețea, decodare, publicare/commit
+  git, încărcare de imagine/resursă asincronă): adaugă apeluri de log DE LA
+  ÎNCEPUT, nu abia când apare un bug de investigat. Motiv real, găsit chiar
+  în această sesiune: bug-ul cu filigranul sezonier care nu se încărca
+  niciodată a fost diagnosticat DOAR după ce am adăugat manual print-uri
+  temporare și am rulat aplicația din Terminal — cu logul permanent deja
+  acolo, diagnosticul ar fi durat un fișier citit, nu o sesiune de
+  reproducere manuală. Un singur fișier de log, comun tuturor componentelor
+  aceleiași aplicații (Client + Furnizor, dacă există) — userul trimite UN
+  fișier, nu trebuie să știe care componentă a scris eroarea.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
