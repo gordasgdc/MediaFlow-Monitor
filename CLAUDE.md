@@ -590,6 +590,65 @@ Diagnostic permanent, nu print-uri temporare (2026-08-29).**
   aceleiași aplicații (Client + Furnizor, dacă există) — userul trimite UN
   fișier, nu trebuie să știe care componentă a scris eroarea.
 
+**27. Preț dinamic ("Pricing Manager"), fără recompilare (2026-08-30).**
+Stabilit după un audit real: prețul de donație al fiecărei aplicații era
+hardcodat direct în cod (`Localization.swift`/`.cs`, text WhatsApp
+pre-completat) — o simplă ofertă de Black Friday necesita recompilarea +
+resemnarea + republicarea FIECĂREI aplicații (12 repo-uri) doar ca să
+schimbi o cifră afișată. Devine standard pentru orice aplicație GDC
+nouă/modificată, de la următoarea ei actualizare:
+- **`docs/pricing.json`** (nou, `gdc-plugin-manager-catalog-vendor`,
+  servit static la `https://gordas.dev/pricing.json`) — sursa canonică a
+  prețurilor, per `productID`: `basePrice` + un `promoSchedule` (LISTĂ de
+  ferestre de ofertă programate din timp — preț, etichetă, interval de
+  timp, `showCountdown` opțional pentru un countdown live în UI). NU o
+  singură ofertă on/off — Cristi poate programa dinainte mai multe
+  perioade succesive (lună curentă, Black Friday, Crăciun), aplicația
+  alege singură fereastra activă la momentul respectiv.
+- **Furnizor — panoul "Prețuri & Oferte"** (`PricingManagerView.swift`,
+  `gdc-plugin-manager-catalog-vendor`) — editează prețul de bază +
+  programul de oferte per produs, "Publică" face `git pull` → scrie
+  `docs/pricing.json` → `commit`+`push` (reutilizează `GitOps` deja
+  existent) — live pe toate aplicațiile în câteva minute, FĂRĂ nicio
+  recompilare.
+- **`PricingChecker`** (portat identic per aplicație client, după modelul
+  `UpdateChecker`/`update.json`) — fetch la lansare (+ manual, la
+  deschiderea ecranului de activare), calculează prețul efectiv (fereastra
+  activă din `promoSchedule`, altfel `basePrice`). **Fail-open, ca
+  RevocationCheck (Regula 12)**: fără conexiune sau `productID` lipsă din
+  `pricing.json`, se folosește prețul hardcodat existent în cod ca
+  fallback — niciodată un ecran de donație gol/eronat.
+- Orice loc care afișează prețul (ecranul de activare/donație, mesajul
+  WhatsApp pre-completat, landing page-ul aplicației) citește prin acest
+  checker, nu o valoare hardcodată direct.
+- **Status (2026-08-30): IMPLEMENTAT integral în Furnizor + pilot complet
+  în DataMover (Mac)** — `PricingChecker.swift`, `ActivationSheet.swift`.
+  Portul pe DataMover (Windows) și pe restul aplicațiilor din ecosistem
+  (CursorPro, GDCVault, CGConvertor, MediaFlow Monitor, Master Control
+  Studio Pro) rămâne TODO, de făcut incremental — fiecare aplicație
+  atinsă de acum înainte trebuie să adopte acest pattern, nu doar cele
+  menționate aici.
+
+**28. Auditul licenței active NU e opțional la nicio modificare de
+licențiere (2026-08-30).** Descoperit direct din acest bug: DataMover avea
+`isUnlocked`/`IsUnlocked` calculat corect (`isLicensed || isTrialActive`)
+dar NEFOLOSIT nicăieri — proba nu bloca NIMIC, nici măcar după expirare,
+pe ambele platforme, de la prima implementare. Bug-ul a stat nedescoperit
+mult timp fiindcă nimeni nu a verificat explicit "acest câmp e doar
+calculat, sau chiar oprește o acțiune reală?". Regulă practică: la orice
+atingere a fluxului de licențiere/probă al unei aplicații GDC (Mac/
+Windows), verifică explicit — cu `grep`, nu presupunere — că orice câmp
+gen `isUnlocked`/`isLicensed`/`isTrialActive` e efectiv REFERENȚIAT
+într-un `guard`/`if` care blochează o acțiune reală (scriere pe disc,
+pornire transfer, aplicare modificare), nu doar afișat într-un banner
+informativ. Un banner "X zile rămase" fără nicio consecință reală nu e
+gating, e doar UI. **Audit 2026-08-30 (rezultat)**: CursorPro, GDCVault,
+CGConvertor, Master Control Studio Pro — verificate, gating real prezent.
+DataMover — bug real, reparat (plafon de 2 GB per transfer în versiunea
+neactivată, vezi Etapa 2026-08-30 (2) din secțiunea Partea 2).
+`gdc-production-manager`/`gdc-resolve-encoder` — arhitectură diferită
+(backend/C++), nu acoperite de acest audit, de verificat separat.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
