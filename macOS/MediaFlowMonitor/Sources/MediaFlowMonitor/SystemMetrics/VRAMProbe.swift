@@ -37,4 +37,35 @@ enum VRAMProbe {
         guard let bytes = readUsedBytes() else { return nil }
         return Double(bytes) / 1_073_741_824
     }
+
+    /// Procent de utilizare GPU (0-100), pentru GPU Monitor (2026-08-31) —
+    /// aceeași sursă `PerformanceStatistics`, cheia "Device Utilization %",
+    /// observată empiric pe Apple Silicon (Activity Monitor foloseste o
+    /// cheie echivalenta pentru graficul sau de GPU History). La fel ca
+    /// VRAM: PRIVATA/nedocumentata, best-effort, nil daca lipseste - nu
+    /// exista API public Apple pentru asta.
+    static func readUtilizationPercent() -> Double? {
+        var iterator: io_iterator_t = 0
+        let matching = IOServiceMatching("IOAccelerator")
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == KERN_SUCCESS else {
+            return nil
+        }
+        defer { IOObjectRelease(iterator) }
+
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            defer { IOObjectRelease(service); service = IOIteratorNext(iterator) }
+
+            guard let props = IORegistryEntryCreateCFProperty(
+                service, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0
+            )?.takeRetainedValue() as? [String: Any] else { continue }
+
+            for key in ["Device Utilization %", "GPU Activity(%)"] {
+                if let value = props[key] as? NSNumber {
+                    return value.doubleValue
+                }
+            }
+        }
+        return nil
+    }
 }

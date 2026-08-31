@@ -63,6 +63,8 @@ final class DashboardViewModel: ObservableObject {
     @Published var swapLevel: MetricLevel = .ok
     @Published var overallLevel: MetricLevel = .ok
     @Published var vramUsedGB: Double?
+    @Published var gpuUtilizationPercent: Double?
+    @Published var thermalState: ThermalState = .nominal
     @Published var cpuPerCore: [Double] = []
     @Published var topRamProcesses: [ProcessUsage] = []
     @Published var topSwapProcesses: [ProcessUsage] = []
@@ -97,6 +99,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var vramHistory: [HistoryPoint] = []
     @Published var swapHistory: [HistoryPoint] = []
     @Published var cpuAvgHistory: [HistoryPoint] = []
+    @Published var gpuHistory: [HistoryPoint] = []
 
     @Published var logConsole: [LogConsoleEntry] = []
     @Published var recommendations: [Recommendation] = []
@@ -116,10 +119,13 @@ final class DashboardViewModel: ObservableObject {
     private let vramHistoryStore = MetricsHistory()
     private let swapHistoryStore = MetricsHistory()
     private let cpuHistoryStore = MetricsHistory()
+    private let gpuHistoryStore = MetricsHistory()
 
     private var cancellables = Set<AnyCancellable>()
     private var diskCheckTimer: Timer?
     private let logWatcher: DaVinciLogWatcher?
+    private let thermalMonitor = ThermalMonitor()
+    private var thermalBannerSent = false
 
     init(metrics: SystemMetrics, logWatcher: DaVinciLogWatcher?) {
         self.logWatcher = logWatcher
@@ -129,6 +135,12 @@ final class DashboardViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in self?.apply(snapshot) }
             .store(in: &cancellables)
+
+        thermalMonitor.statePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in self?.apply(thermalState: state) }
+            .store(in: &cancellables)
+        thermalMonitor.start()
 
         logWatcher?.signalPublisher
             .receive(on: DispatchQueue.main)
@@ -143,6 +155,10 @@ final class DashboardViewModel: ObservableObject {
             self?.checkHangingDaVinci()
         }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    deinit {
+        thermalMonitor.stop()
     }
 
     private func checkDisk() {
@@ -178,17 +194,35 @@ final class DashboardViewModel: ObservableObject {
         UNUserNotificationCenter.current().add(request)
     }
 
+    private func apply(thermalState state: ThermalState) {
+        thermalState = state
+        if state >= .serious {
+            sendBanner(id: "thermal-high", title: "Sistem supraîncălzit",
+                       body: "Nivel termic: \(state.label). Randarea poate încetini (throttling).", once: &thermalBannerSent)
+        } else {
+            thermalBannerSent = false
+        }
+        recomputeOverallLevel()
+        updateRecommendations()
+    }
+
+    private func recomputeOverallLevel() {
+        let levels = [ramLevel, swapLevel, thermalState.level]
+        overallLevel = levels.contains(.critical) ? .critical
+            : (levels.contains(.warning) ? .warning : .ok)
+    }
+
     private func apply(_ snapshot: MemorySnapshot) {
         ramFraction = min(snapshot.ramUsedGB / max(snapshot.ramTotalGB, 1), 1)
         swapFraction = min(snapshot.swapUsedGB / 8.0, 1)
         vramUsedGB = snapshot.vramUsedGB
+        gpuUtilizationPercent = snapshot.gpuUtilizationPercent
         cpuPerCore = snapshot.cpuPerCore
         topRamProcesses = snapshot.topRamProcesses
         topSwapProcesses = snapshot.topSwapProcesses
         swapLevel = snapshot.swapLevel
         ramLevel = ramFraction > 0.9 ? .critical : (ramFraction > 0.75 ? .warning : .ok)
-        overallLevel = [ramLevel, swapLevel].contains(.critical) ? .critical
-            : ([ramLevel, swapLevel].contains(.warning) ? .warning : .ok)
+        recomputeOverallLevel()
 
         if let vram = snapshot.vramUsedGB {
             vramHistoryStore.append(vram * 1024) // MB, ca în mockup
@@ -196,6 +230,11 @@ final class DashboardViewModel: ObservableObject {
         }
         swapHistoryStore.append(snapshot.swapUsedGB * 1024)
         swapHistory = swapHistoryStore.points
+
+        if let gpu = snapshot.gpuUtilizationPercent {
+            gpuHistoryStore.append(gpu)
+            gpuHistory = gpuHistoryStore.points
+        }
 
         let avgCpu = snapshot.cpuPerCore.isEmpty ? 0 : snapshot.cpuPerCore.reduce(0, +) / Double(snapshot.cpuPerCore.count) * 100
         cpuHistoryStore.append(avgCpu)
@@ -287,6 +326,8 @@ final class DashboardViewModel: ObservableObject {
         lines.append(String(format: "RAM: %.1f%% (nivel %@)", ramFraction * 100, levelText(ramLevel)))
         lines.append(String(format: "Swap: %.1f%% (nivel %@)", swapFraction * 100, levelText(swapLevel)))
         lines.append("VRAM: \(vramUsedGB.map { String(format: "%.1f GB", $0) } ?? "necunoscut")")
+        lines.append("GPU: \(gpuUtilizationPercent.map { String(format: "%.0f%%", $0) } ?? "necunoscut")")
+        lines.append("Thermal: \(thermalState.label)")
         if let disk = diskInfo {
             lines.append(String(format: "CacheClip disk: %.1f GB liberi din %.0f GB (%@)", disk.freeGB, disk.totalGB, disk.path.path))
         }
@@ -358,6 +399,11 @@ final class DashboardViewModel: ObservableObject {
         }
         if hangingDaVinciDetected {
             items.append(Recommendation(text: "DaVinci Resolve pare agățat în fundal (blochează RAM/VRAM) — Force Close Hanging DaVinci", level: .critical))
+        }
+        if thermalState == .critical {
+            items.append(Recommendation(text: "Thermal: sistem critic — throttling activ, randarea va încetini", level: .critical))
+        } else if thermalState == .serious {
+            items.append(Recommendation(text: "Thermal: sistem încălzit — throttling probabil în curând", level: .warning))
         }
         if items.isEmpty {
             items.append(Recommendation(text: "All systems normal", level: .ok))

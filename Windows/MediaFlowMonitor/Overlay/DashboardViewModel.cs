@@ -22,7 +22,7 @@ public sealed record Recommendation(string Text, MetricLevel Level);
 /// Echivalentul DashboardViewModel.swift — orchestrează metrice, istoric de
 /// grafice, consola de log decodat, recomandările și acțiunile (cu consolă
 /// live stil Terminal, identic cu Dashboard-ul de pe Mac).
-public sealed class DashboardViewModel : INotifyPropertyChanged
+public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 {
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Raise([CallerMemberName] string? name = null) =>
@@ -36,6 +36,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private readonly MetricsHistory _vramHistoryStore = new();
     private readonly MetricsHistory _swapHistoryStore = new();
     private readonly MetricsHistory _cpuHistoryStore = new();
+    private readonly MetricsHistory _gpuHistoryStore = new();
+    private readonly ThermalMonitor _thermalMonitor = new();
+    private bool _thermalBannerSent;
 
     public double RamFraction { get => _ramFraction; private set { _ramFraction = value; Raise(); } }
     private double _ramFraction;
@@ -49,6 +52,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private MetricLevel _overallLevel;
     public double? VramUsedGB { get => _vramUsedGB; private set { _vramUsedGB = value; Raise(); } }
     private double? _vramUsedGB;
+    public double? GpuUtilizationPercent { get => _gpuUtilizationPercent; private set { _gpuUtilizationPercent = value; Raise(); } }
+    private double? _gpuUtilizationPercent;
+    public ThermalState ThermalState { get => _thermalState; private set { _thermalState = value; Raise(); } }
+    private ThermalState _thermalState = ThermalState.Unknown;
     public double[] CpuPerCore { get => _cpuPerCore; private set { _cpuPerCore = value; Raise(); } }
     private double[] _cpuPerCore = Array.Empty<double>();
 
@@ -59,6 +66,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ObservableCollection<HistoryPoint> VramHistory { get; } = new();
     public ObservableCollection<HistoryPoint> SwapHistory { get; } = new();
+    public ObservableCollection<HistoryPoint> GpuHistory { get; } = new();
 
     public ObservableCollection<ProcessUsage> TopRamProcesses { get; } = new();
     public ObservableCollection<ProcessUsage> TopSwapProcesses { get; } = new();
@@ -106,12 +114,36 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         if (_logWatcher != null)
             _logWatcher.SignalDetected += (_, signal) => _dispatcher.Invoke(() => Apply(signal));
 
+        _thermalMonitor.StateChanged += (_, state) => _dispatcher.Invoke(() => Apply(state));
+        _thermalMonitor.Start();
+
         CachePathIsManual = CacheFolderLocator.IsManualOverride;
         CheckDisk();
         CheckHangingDaVinci();
         _diskCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
         _diskCheckTimer.Tick += (_, _) => { CheckDisk(); CheckHangingDaVinci(); };
         _diskCheckTimer.Start();
+    }
+
+    public void Dispose() => _thermalMonitor.Dispose();
+
+    private void Apply(ThermalState state)
+    {
+        ThermalState = state;
+        if (state is SystemMetrics.ThermalState.Serious or SystemMetrics.ThermalState.Critical)
+            SendBanner("thermal-high", "Sistem supraîncălzit", $"Nivel termic: {state.Label()}. Randarea poate încetini (throttling).", ref _thermalBannerSent);
+        else
+            _thermalBannerSent = false;
+        RecomputeOverallLevel();
+        UpdateRecommendations();
+    }
+
+    private void RecomputeOverallLevel()
+    {
+        var levels = new[] { RamLevel, SwapLevel, ThermalState.Level() };
+        OverallLevel = levels.Contains(MetricLevel.Critical) ? MetricLevel.Critical
+            : levels.Contains(MetricLevel.Warning) ? MetricLevel.Warning
+            : MetricLevel.Ok;
     }
 
     private void CheckDisk()
@@ -147,14 +179,13 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         RamFraction = Math.Min(snapshot.RamUsedGB / Math.Max(snapshot.RamTotalGB, 1), 1);
         SwapFraction = Math.Min(snapshot.SwapUsedGB / 8.0, 1);
         VramUsedGB = snapshot.VramUsedGB;
+        GpuUtilizationPercent = snapshot.GpuUtilizationPercent;
         CpuPerCore = snapshot.CpuPerCore;
         SyncCollection(TopRamProcesses, snapshot.TopRamProcesses);
         SyncCollection(TopSwapProcesses, snapshot.TopSwapProcesses);
         SwapLevel = snapshot.SwapLevel;
         RamLevel = RamFraction > 0.9 ? MetricLevel.Critical : RamFraction > 0.75 ? MetricLevel.Warning : MetricLevel.Ok;
-        OverallLevel = (RamLevel == MetricLevel.Critical || SwapLevel == MetricLevel.Critical) ? MetricLevel.Critical
-            : (RamLevel == MetricLevel.Warning || SwapLevel == MetricLevel.Warning) ? MetricLevel.Warning
-            : MetricLevel.Ok;
+        RecomputeOverallLevel();
 
         if (snapshot.VramUsedGB is { } vram)
         {
@@ -163,6 +194,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         }
         _swapHistoryStore.Append(snapshot.SwapUsedGB * 1024);
         SyncCollection(SwapHistory, _swapHistoryStore.Points);
+
+        if (snapshot.GpuUtilizationPercent is { } gpu)
+        {
+            _gpuHistoryStore.Append(gpu);
+            SyncCollection(GpuHistory, _gpuHistoryStore.Points);
+        }
 
         if (SwapFraction > 0.8)
             SendBanner("swap-high", "Swap sistem ridicat", $"Swap la {SwapFraction * 100:F0}% — editorul poate deveni lent.", ref _swapBannerSent);
@@ -267,6 +304,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             $"RAM: {RamFraction * 100:F1}% (nivel {RamLevel})",
             $"Swap: {SwapFraction * 100:F1}% (nivel {SwapLevel})",
             $"VRAM: {(VramUsedGB is { } v ? $"{v:F1} GB" : "necunoscut")}",
+            $"GPU: {(GpuUtilizationPercent is { } g ? $"{g:F0}%" : "necunoscut")}",
+            $"Thermal: {ThermalState.Label()}",
         };
         if (DiskInfo is { } disk)
             lines.Add($"CacheClip disk: {disk.FreeGB:F1} GB liberi din {disk.TotalGB:F0} GB ({disk.Path})");
@@ -327,6 +366,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
         if (HangingDaVinciDetected)
             Recommendations.Add(new Recommendation("DaVinci Resolve pare agățat în fundal (blochează RAM/VRAM) — Force Close Hanging DaVinci", MetricLevel.Critical));
+
+        if (ThermalState == ThermalState.Critical)
+            Recommendations.Add(new Recommendation("Thermal: sistem critic — throttling activ, randarea va încetini", MetricLevel.Critical));
+        else if (ThermalState == ThermalState.Serious)
+            Recommendations.Add(new Recommendation("Thermal: sistem încălzit — throttling probabil în curând", MetricLevel.Warning));
 
         if (Recommendations.Count == 0)
             Recommendations.Add(new Recommendation("All systems normal", MetricLevel.Ok));

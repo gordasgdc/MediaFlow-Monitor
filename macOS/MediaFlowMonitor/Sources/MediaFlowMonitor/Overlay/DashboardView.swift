@@ -212,6 +212,8 @@ struct DashboardView: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 detailRow(icon: "cpu", label: "VRAM", value: vm.vramUsedGB.map { String(format: "%.1f GB", $0) } ?? "—")
+                detailRow(icon: "gauge.with.dots.needle.67percent", label: "GPU", value: vm.gpuUtilizationPercent.map { String(format: "%.0f%%", $0) } ?? "necunoscut pe acest Mac")
+                detailRow(icon: "thermometer.sun", label: "Thermal", value: vm.thermalState.label, dotColor: color(for: vm.thermalState.level))
                 detailRow(icon: "internaldrive", label: "Partition", value: vm.diskInfo.map { String(format: "%.0f GB", $0.totalGB) } ?? "—")
                 detailRow(icon: "circle.fill", label: "CacheClip disk", value: vm.diskInfo.map { String(format: "%.0f GB liber", $0.freeGB) } ?? "—", dotColor: diskDotColor)
             }
@@ -258,6 +260,24 @@ struct DashboardView: View {
                     .chartYScale(domain: 0...100)
                     .frame(height: 130)
                     .frame(maxWidth: .infinity)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("GPU Utilization (%)").font(.caption).foregroundStyle(.secondary)
+                    if vm.gpuHistory.isEmpty {
+                        Text("Necunoscut pe acest Mac").font(.caption2).foregroundStyle(.secondary)
+                            .frame(height: 130).frame(maxWidth: .infinity)
+                    } else {
+                        Chart {
+                            ForEach(vm.gpuHistory) { point in
+                                LineMark(x: .value("Time", point.date), y: .value("GPU", point.value))
+                                    .foregroundStyle(.purple)
+                            }
+                        }
+                        .chartXAxis(.hidden)
+                        .chartYScale(domain: 0...100)
+                        .frame(height: 130)
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
         }

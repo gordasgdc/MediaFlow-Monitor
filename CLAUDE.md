@@ -700,6 +700,44 @@ clase, cauze tehnice) unei audiențe publice necunoscute.
 
 ## Technical Decisions & Known Pitfalls
 
+- **2026-08-31 — GPU Monitor + Thermal Monitor (Mac + Windows, v1.9.0).**
+  Nivel 1 pct. 2 și Nivel 3 pct. 10 din brainstorm-ul Master Control Studio
+  Pro, mutate explicit pe MediaFlow Monitor (decizia lui Cristi).
+  - **GPU Monitor**: pe Mac, extensie a `VRAMProbe.swift` existent —
+    aceeași sursă `IOAccelerator`/`PerformanceStatistics`, cheia "Device
+    Utilization %" (privată/nedocumentată, ca și VRAM — best-effort, nil
+    dacă lipsește). Pe Windows, categoria de contoare built-in "GPU Engine"
+    (DXGI, Win10 1903+), filtrată pe instanțe `engtype_3D` și însumată — e
+    exact sursa graficului "GPU" din Task Manager, fără niciun SDK de
+    vendor (NVML/ADL).
+  - **Thermal Monitor**: DECIZIE DE ARHITECTURĂ — niciun raw-temperature
+    citit prin SMC (Mac, nedocumentat/fragil) sau termen ACPI universal
+    (Windows, adesea absent pe desktop-uri). Mac folosește
+    `ProcessInfo.thermalState` — API PUBLIC, DOCUMENTAT, calculat de OS din
+    senzorii reali, 4 stări (nominal/fair/serious/critical), expus prin
+    `ThermalMonitor.swift` (nou) + `NotificationCenter` pe
+    `thermalStateDidChangeNotification`. Windows nu are echivalent public —
+    `ThermalMonitor.cs` (nou) încearcă `MSAcpi_ThermalZoneTemperature`
+    (WMI `root\WMI`), cu un al 5-lea caz explicit `Unknown` (NU alarmă)
+    când placa de bază nu expune senzorul ACPI — la fel de onest ca
+    eticheta "Top Swap Activity" de pe Mac (proxy documentat, nu o valoare
+    inventată sau falsă stare "sănătos").
+  - UI: badge colorat + rând nou în panoul "System Health", grafic nou GPU
+    (%) lângă VRAM/Swap și CPU, recomandare + notificare nativă
+    (`UNUserNotificationCenter`/`NotifyIcon`) când starea termică ajunge
+    "serious"/"critical". `OverallLevel`-ul dashboard-ului include acum și
+    nivelul termic (Unknown mapat la Ok, nu alarmează fals).
+  - **Verificat real, nu doar citit**: `swift build` (Mac) — 0 erori.
+    `dotnet build MediaFlowMonitor.csproj -r win-x64` (Windows) — 0 erori,
+    XAML→BAML inclus. **Corectare notă anterioară din acest fișier**: acum
+    CÂTEVA luni, `dotnet build net8.0-windows` nu putea rula deloc pe acest
+    Mac (`NETSDK1082`, runtime pack lipsă) — SDK-ul .NET instalat între
+    timp (10.0.400) chiar are runtime pack pentru `win-x64`, deci build-ul
+    real funcționează acum CU CONDIȚIA să specifici explicit `-r win-x64`
+    (fără el, alege implicit RID-ul gazdei — `osx-arm64` — și eșuează la
+    fel ca înainte). Rămâne totuși necesar un test de RULARE completă pe
+    Windows real (Parallels) înainte de orice release — build-ul verifică
+    doar compilarea, nu comportamentul runtime al `PerformanceCounter`/WMI.
 - **2026-08-22 — Automatic Termination silent kill.** O aplicație `LSUIElement`
   fără fereastră vizibilă și fără `NSStatusItem` e omorâtă silențios de
   macOS după ~24s. Fix: `ProcessInfo.disableAutomaticTermination` +
