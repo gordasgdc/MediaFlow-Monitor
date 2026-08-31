@@ -58,8 +58,11 @@ final class LicenseManager: ObservableObject {
 
     var machineIDDisplay: String { MachineID.display }
 
+    // Preț dinamic (Regula 27) - vezi PricingChecker. Fail-open pe 7 €
+    // (valoarea hardcodata anterior) daca pricing.json nu e accesibil.
     var whatsAppActivationURL: URL {
-        let text = "Salut! Vreau Lifetime Access pentru MediaFlow Monitor (donatie 7e). Machine ID: \(machineIDDisplay)"
+        let priceText = PricingChecker.shared.displayText
+        let text = "Salut! Vreau Lifetime Access pentru MediaFlow Monitor (donatie \(priceText)). Machine ID: \(machineIDDisplay)"
         let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? text
         return URL(string: "https://wa.me/34643109970?text=\(encoded)")!
     }
