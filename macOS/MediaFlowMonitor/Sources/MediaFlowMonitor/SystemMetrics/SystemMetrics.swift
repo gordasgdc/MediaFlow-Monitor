@@ -12,6 +12,9 @@ struct MemorySnapshot: Equatable {
     let swapUsedGB: Double
     let swapLevel: MetricLevel
     let vramUsedGB: Double?
+    /// Procent utilizare GPU (0-100) - nil daca IOAccelerator nu expune
+    /// cheia pe acest Mac (vezi VRAMProbe.readUtilizationPercent).
+    let gpuUtilizationPercent: Double?
     let cpuPerCore: [Double]
     let topRamProcesses: [ProcessUsage]
     let topSwapProcesses: [ProcessUsage]
@@ -60,6 +63,7 @@ final class SystemMetrics {
             ramUsedGB: ram.used, ramTotalGB: ram.total,
             swapUsedGB: swap, swapLevel: level,
             vramUsedGB: VRAMProbe.readUsedGB(),
+            gpuUtilizationPercent: VRAMProbe.readUtilizationPercent(),
             cpuPerCore: CPUMonitor.perCoreUsage(),
             topRamProcesses: topRam,
             topSwapProcesses: topSwapActivity

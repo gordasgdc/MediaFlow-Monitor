@@ -168,3 +168,24 @@ public sealed class RunningActionToBoolInverseConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+/// ThermalState -> Brush, prin acelasi MetricLevel/resurse de tema ca
+/// MetricLevelToBrushConverter (Unknown se mapeaza la Ok - vezi nota din
+/// ThermalMonitor.cs, o lipsa de senzor nu trebuie sa alarmeze vizual).
+public sealed class ThermalStateToBrushConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var level = value is ThermalState state ? state.Level() : MetricLevel.Ok;
+        var key = level switch
+        {
+            MetricLevel.Critical => "CriticalBrush",
+            MetricLevel.Warning => "WarningBrush",
+            _ => "OkBrush",
+        };
+        return System.Windows.Application.Current.TryFindResource(key) ?? System.Windows.Media.Brushes.Gray;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

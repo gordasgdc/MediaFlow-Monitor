@@ -11,6 +11,7 @@
         Visibility="Collapsed">
     <Window.Resources>
         <local:MetricLevelToBrushConverter x:Key="LevelToBrush"/>
+        <local:ThermalStateToBrushConverter x:Key="ThermalToBrush"/>
         <local:NullableBoolToHealthTextConverter x:Key="HealthText"/>
         <local:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <local:RunningActionEqualsConverter x:Key="ActionEquals"/>
@@ -149,6 +150,26 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
+                                <TextBlock Text="GPU" Style="{StaticResource CaptionStyle}"/>
+                                <TextBlock x:Name="GpuText" Grid.Column="1" Style="{StaticResource CaptionStyle}"/>
+                            </Grid>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Thermal" Style="{StaticResource CaptionStyle}"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Margin="0,0,5,0" VerticalAlignment="Center"
+                                             Fill="{Binding ThermalState, Converter={StaticResource ThermalToBrush}}"/>
+                                    <TextBlock x:Name="ThermalText" Style="{StaticResource CaptionStyle}"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
                                 <TextBlock Text="Partition" Style="{StaticResource CaptionStyle}"/>
                                 <TextBlock x:Name="PartitionText" Grid.Column="1" Style="{StaticResource CaptionStyle}"/>
                             </Grid>
@@ -185,6 +206,16 @@
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Width="380">
+                                <TextBlock Text="GPU Utilization (%)" Style="{StaticResource CaptionStyle}"/>
+                                <Border Height="130" Margin="0,4,0,0" ClipToBounds="True">
+                                    <Grid>
+                                        <TextBlock x:Name="GpuUnavailableText" Text="Necunoscut pe acest PC"
+                                                   Style="{StaticResource CaptionStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Canvas x:Name="GpuCanvas" SizeChanged="OnGpuCanvasSizeChanged"/>
+                                    </Grid>
                                 </Border>
                             </StackPanel>
                         </WrapPanel>

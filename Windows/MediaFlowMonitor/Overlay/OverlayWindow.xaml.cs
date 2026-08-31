@@ -33,6 +33,7 @@ public partial class OverlayWindow : Window
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.VramHistory.CollectionChanged += (_, _) => RedrawPerformanceChart();
         _vm.SwapHistory.CollectionChanged += (_, _) => RedrawPerformanceChart();
+        _vm.GpuHistory.CollectionChanged += (_, _) => RedrawGpuChart();
 
         ThemeSystemRadio.IsChecked = ThemeManager.Shared.Current == AppTheme.System;
         ThemeLightRadio.IsChecked = ThemeManager.Shared.Current == AppTheme.Light;
@@ -45,6 +46,7 @@ public partial class OverlayWindow : Window
             Top = workArea.Top + 20;
             RedrawPerformanceChart();
             RedrawCpuBars();
+            RedrawGpuChart();
             UpdateHealthDetailTexts();
             UpdateCacheDiskPanel();
         };
@@ -62,6 +64,8 @@ public partial class OverlayWindow : Window
         switch (e.PropertyName)
         {
             case nameof(DashboardViewModel.VramUsedGB):
+            case nameof(DashboardViewModel.GpuUtilizationPercent):
+            case nameof(DashboardViewModel.ThermalState):
             case nameof(DashboardViewModel.DiskInfo):
                 UpdateHealthDetailTexts();
                 UpdateCacheDiskPanel();
@@ -110,6 +114,28 @@ public partial class OverlayWindow : Window
         PerformanceCanvas.Children.Add(poly);
     }
 
+    // MARK: - Grafic GPU (aceeași tehnică desenată procedural)
+
+    private void OnGpuCanvasSizeChanged(object sender, SizeChangedEventArgs e) => RedrawGpuChart();
+
+    private void RedrawGpuChart()
+    {
+        GpuCanvas.Children.Clear();
+        double w = GpuCanvas.ActualWidth, h = GpuCanvas.ActualHeight;
+        bool hasData = _vm.GpuHistory.Count >= 2;
+        GpuUnavailableText.Visibility = hasData ? Visibility.Collapsed : Visibility.Visible;
+        if (!hasData || w <= 0 || h <= 0) return;
+
+        var poly = new Polyline { Stroke = System.Windows.Media.Brushes.MediumPurple, StrokeThickness = 1.5 };
+        for (int i = 0; i < _vm.GpuHistory.Count; i++)
+        {
+            double x = w * i / (_vm.GpuHistory.Count - 1);
+            double y = h - (Math.Min(_vm.GpuHistory[i].Value, 100) / 100.0 * h);
+            poly.Points.Add(new System.Windows.Point(x, y));
+        }
+        GpuCanvas.Children.Add(poly);
+    }
+
     // MARK: - Bare CPU per-core
 
     private void RedrawCpuBars()
@@ -138,6 +164,8 @@ public partial class OverlayWindow : Window
     private void UpdateHealthDetailTexts()
     {
         VramText.Text = _vm.VramUsedGB is { } v ? $"{v:F1} GB" : "—";
+        GpuText.Text = _vm.GpuUtilizationPercent is { } g ? $"{g:F0}%" : "necunoscut";
+        ThermalText.Text = _vm.ThermalState.Label();
         var disk = _vm.DiskInfo;
         PartitionText.Text = disk != null ? $"{disk.TotalGB:F0} GB" : "—";
         CacheClipFreeText.Text = disk != null ? $"{disk.FreeGB:F0} GB liber" : "—";
