@@ -649,6 +649,45 @@ neactivată, vezi Etapa 2026-08-30 (2) din secțiunea Partea 2).
 `gdc-production-manager`/`gdc-resolve-encoder` — arhitectură diferită
 (backend/C++), nu acoperite de acest audit, de verificat separat.
 
+**29. Zero informație internă în orice loc PUBLIC (release notes GitHub,
+fișiere comise într-un repo public, commit messages vizibile) (2026-08-31).**
+Bug real, găsit de Cristi live pe `gdc-plugin-manager` (v1.21.0): descrierea
+publică a unui GitHub Release conținea citate directe ("Cerință explicită a
+lui Cristi: ...") și explicații de cauză/debugging ("Raportat de Cristi: ...",
+"Cauza reală: ..."), iar `MacMasterControlPro` avea un fișier
+`GHID_INTERN_ONBOARDING_GOOGLE_DRIVE.md` — destinat EXCLUSIV lui Cristi —
+comis la rădăcina unui repo PUBLIC, vizibil oricui. Motivul dat de Cristi:
+"clientii nu trebuie sa vada mesajele explicative a dezvoltarii aplicatiei,
+creeaza vulnerabilitati de securitate" — expune numele lui, fluxul de
+raportare a bug-urilor, detalii de implementare interne (nume de fișiere,
+clase, cauze tehnice) unei audiențe publice necunoscute.
+- **Orice text destinat unui `gh release create`/`gh release edit` pe un
+  repo PUBLIC e scris DIN START ca notă de lansare orientată spre client**:
+  ce e nou / ce s-a reparat, în limbaj simplu, FĂRĂ nume proprii, FĂRĂ
+  citate din conversația cu Cristi, FĂRĂ "cauza reală"/explicații de
+  debugging, FĂRĂ nume de fișiere/clase/funcții din cod. Jurnalul tehnic
+  complet (cu tot context-ul de mai sus) rămâne EXCLUSIV în `CLAUDE.md`/
+  `CHANGELOG.md` din repo — acelea nu apar niciodată ca body de release.
+- **Niciun fișier "intern"/"doar pentru Cristi" nu se comite la rădăcina
+  (sau oriunde altundeva) unui repo cu `isPrivate: false`.** Dacă un
+  document e cu adevărat intern (proceduri de admin, secrete de proces,
+  chei/target-uri de whitelisting etc.), trăiește DOAR local, adăugat
+  explicit în `.gitignore` — niciodată împins pe un remote public. Dacă
+  un asemenea fișier a fost deja comis pe un repo public, se elimină din
+  working tree + `.gitignore` imediat (istoricul git rămâne, ca la orice
+  secret comis anterior — semnalat explicit lui Cristi, nu doar curățat
+  tacit, exact ca la Regula 2).
+- **Verificare obligatorie înainte de orice `gh release create`/`edit`**:
+  recitește textul notelor ca și cum ai fi un client care nu știe nimic
+  despre proces — orice propoziție care ar suna ciudat/nepotrivit unui
+  necunoscut (nume, citate, cauze tehnice de debugging) se rescrie sau se
+  elimină înainte de publicare, nu după ce cineva o semnalează.
+- **Audit retroactiv (2026-08-31)**: curățate manual release notes publice
+  pentru `gdc-plugin-manager` (v1.21.0, v1.20.1), `mac-master-control-pro`
+  (v2.9.0, v2.8.0), `mac-master-control-pro-win` (v1.10.0),
+  `MediaFlow-Monitor` (v1.0.0/v1.0.1) — restul release-urilor mai vechi din
+  ecosistem rămân de verificat incremental, nu toate dintr-o dată.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
