@@ -18,7 +18,7 @@
     <!-- Versiune Windows independentă de cea de pe Mac (fiecare platformă
          are propriul câmp în dist/version-manifest.json) — bump manual la
          fiecare release, sincron cu Windows/installer.iss (Regula 14). -->
-    <Version>1.9.0</Version>
+    <Version>1.9.1</Version>
     <RootNamespace>MediaFlowMonitor</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWPF>true</UseWPF>

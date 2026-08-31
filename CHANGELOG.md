@@ -5,6 +5,12 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.9.1 (2026-08-31) — Preț dinamic din Furnizor (Mac + Windows)
+
+Suma de donație din mesajul WhatsApp de activare se citește acum din
+`pricing.json` (Furnizor), nu mai e fixă în cod — orice ofertă programată
+apare automat, fără recompilare.
+
 ## v1.9.0 (2026-08-31) — GPU Monitor + Thermal Monitor
 
 Două module noi de monitorizare, adăugate în Dashboard-ul Pro (Mac + Windows):

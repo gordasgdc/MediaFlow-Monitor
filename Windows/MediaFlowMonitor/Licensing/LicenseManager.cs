@@ -78,11 +78,14 @@ public sealed class LicenseManager : INotifyPropertyChanged
 
     public string MachineIDDisplay => MachineID.Display;
 
+    // Preț dinamic (Regula 27) - vezi PricingChecker. Fail-open pe 7 €
+    // (valoarea hardcodata anterior) daca pricing.json nu e accesibil.
     public string WhatsAppActivationUrl
     {
         get
         {
-            var text = $"Salut! Vreau Lifetime Access pentru MediaFlow Monitor (donatie 7e). Machine ID: {MachineIDDisplay}";
+            var priceText = PricingChecker.Shared.DisplayText;
+            var text = $"Salut! Vreau Lifetime Access pentru MediaFlow Monitor (donatie {priceText}). Machine ID: {MachineIDDisplay}";
             return $"https://wa.me/34643109970?text={Uri.EscapeDataString(text)}";
         }
     }
