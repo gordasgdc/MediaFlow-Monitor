@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Ghid de utilizare intern (RO/EN/ES — Regula 8 din CLAUDE.md, consistent
 /// cu restul localizării ecosistemului GDC), afișat ca fereastră nativă
@@ -35,8 +36,29 @@ struct UserGuideView: View {
                 .padding(.bottom, 24)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            Divider()
+            // [2026-09-06] Ghidul PDF bundle-uit (installer/Instructiuni_Utilizare.pdf)
+            // nu era deschis din NICIUN loc al aplicatiei pana acum - doar
+            // livrat in arhiva de descarcare. Buton nou, sub ecranul intern
+            // de mai sus (pastrat neschimbat, e la zi cu functiile
+            // recente) - util pentru un document offline/tiparibil complet.
+            Button {
+                openFullGuidePDF()
+            } label: {
+                Label("Deschide ghidul complet (PDF)", systemImage: "doc.richtext")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.tint)
+            .padding(12)
         }
         .frame(width: 620, height: 560)
+    }
+
+    private func openFullGuidePDF() {
+        if let url = Bundle.module.url(forResource: "Instructiuni_Utilizare", withExtension: "pdf") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private struct Section: Identifiable {

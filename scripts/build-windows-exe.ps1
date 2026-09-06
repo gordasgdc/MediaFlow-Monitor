@@ -49,6 +49,9 @@ $GdcOut = Join-Path $Out "Resources\GDC"
 New-Item -ItemType Directory -Force -Path $GdcOut | Out-Null
 Copy-Item (Join-Path $Root "Resources\GDC\gdc-icon.png") $GdcOut -Force
 Copy-Item (Join-Path $Root "Resources\GDC\gdc-icon.ico") $GdcOut -Force
+# [2026-09-06] Ghidul PDF, langa exe - deschis din meniul tray-ului
+# (App.xaml.cs, OpenHelpGuide) - nu era bundle-uit deloc pana acum.
+Copy-Item (Join-Path $Root "installer\Instructiuni_Utilizare.pdf") $Out -Force
 
 Write-Host "-> Packaging private test archive (dist\)..."
 $DistDir = Join-Path $Root "dist"

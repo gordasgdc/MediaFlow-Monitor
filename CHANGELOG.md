@@ -5,6 +5,13 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.9.2 (2026-09-06) — Ghidul PDF, accesibil acum din fereastra de Ajutor
+
+Ghidul PDF (`Instructiuni_Utilizare.pdf`) exista deja în arhiva de
+descărcare, dar nu putea fi deschis din interiorul aplicației. Buton nou
+„Deschide ghidul complet (PDF)” în fereastra de Ajutor (Help), sub
+ghidul rapid deja existent.
+
 ## v1.9.1 (2026-08-31) — Preț dinamic din Furnizor (Mac + Windows)
 
 Suma de donație din mesajul WhatsApp de activare se citește acum din

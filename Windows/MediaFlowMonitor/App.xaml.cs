@@ -78,6 +78,7 @@ public partial class App : Application
         menu.Items.Add("Introdu codul de activare...", null, (_, _) => PromptActivationCode());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Cauta actualizari...", null, (_, _) => _ = CheckForUpdatesAsync(silent: false));
+        menu.Items.Add("Ghid de utilizare (PDF)", null, (_, _) => OpenHelpGuide());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Iesire", null, (_, _) => Shutdown());
 
@@ -89,6 +90,17 @@ public partial class App : Application
             ContextMenuStrip = menu,
         };
         _trayIcon.DoubleClick += (_, _) => _overlay?.Toggle();
+    }
+
+    /// [2026-09-06] Deschide ghidul PDF bundle-uit langa exe
+    /// (build-windows-exe.ps1/build-windows.yml copiaza
+    /// installer/Instructiuni_Utilizare.pdf) — meniul tray-ului nu avea
+    /// NICIUN acces la ghid pana acum.
+    private static void OpenHelpGuide()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Instructiuni_Utilizare.pdf");
+        if (!File.Exists(path)) return;
+        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
 
     /// BUG FIX (2026-08-26): tray icon-ul folosea `SystemIcons.Application`

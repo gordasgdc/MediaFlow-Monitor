@@ -57,6 +57,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path Publish\Windows\win-${{ matrix.arch }}\Resources\GDC | Out-Null
           Copy-Item Resources\GDC\gdc-icon.png Publish\Windows\win-${{ matrix.arch }}\Resources\GDC -Force
           Copy-Item Resources\GDC\gdc-icon.ico Publish\Windows\win-${{ matrix.arch }}\Resources\GDC -Force
+          Copy-Item installer\Instructiuni_Utilizare.pdf Publish\Windows\win-${{ matrix.arch }} -Force
 
       - name: Compileaza instalatorul (Inno Setup - preinstalat pe runner-ul windows-latest)
         run: |

@@ -9,7 +9,7 @@ let package = Package(
         .executableTarget(
             name: "MediaFlowMonitor",
             path: "Sources/MediaFlowMonitor",
-            resources: [.process("Resources/Localization")]
+            resources: [.process("Resources/Localization"), .copy("Resources/Guide/Instructiuni_Utilizare.pdf")]
         )
     ]
 )

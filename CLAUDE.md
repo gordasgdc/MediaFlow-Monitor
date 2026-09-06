@@ -917,3 +917,39 @@ sau atinsă de-acum înainte:
   real — `dotnet build net8.0-windows` tot nu rulează pe Mac (vezi limitarea
   documentată mai sus). Necesar `dotnet build` + test complet în Parallels
   înainte de orice release.
+
+## Etapa 2026-09-06 — PDF-ul de ghid, accesibil din fereastra de Ajutor (v1.9.2)
+
+Audit ecosistem (cerut de Cristi): `installer/Instructiuni_Utilizare.pdf`
+exista, dar nu era deschis din NICIUN loc al aplicatiei — era livrat doar
+in arhiva de descarcare, langa executabil. `UserGuideView.swift` (ecranul
+nativ din Help, RO/EN/ES) ramane neschimbat ca continut principal — e de
+fapt MAI la zi decat PDF-ul (documenteaza deja GPU/Thermal Monitor v1.9.0,
+CacheClip, Log Decoder) — adaugat doar un buton "Deschide ghidul complet
+(PDF)" sub continutul existent, care deschide fisierul real prin
+`Bundle.module` (`resources: [.copy("Resources/Guide/Instructiuni_Utilizare.pdf")]`
+in `Package.swift`, nou).
+
+**Flag onest, nu ascuns**: `installer/Instructiuni_Utilizare.pdf` insusi
+e din 26 august, cu multe commit-uri in urma (GPU/Thermal Monitor,
+Top RAM/Swap Consumers, Log Decoder Pro nu sunt documentate acolo inca) —
+regenerarea lui completa (portarea continutului deja scris in
+`UserGuideView.swift` in `installer/generate_pdf.py`) ramane TODO real,
+separat, nu facuta in aceasta sesiune (scop mare, cere timp dedicat).
+
+**Verificat**: `swift build` — 0 erori, PDF confirmat copiat in bundle
+(`[0/5] Copying Instructiuni_Utilizare.pdf`). Windows: nu exista un
+echivalent WPF al acestei ferestre de Ajutor cu ghid PDF - de verificat
+separat daca clientul Windows are macar un buton catre ghid.
+
+Versiune 1.9.1 -> 1.9.2 (PATCH). **Nu am actualizat `update.json`** (gazduit
+extern, in `gdc-plugin-manager-catalog-vendor/docs/`) — ramane de
+sincronizat manual la urmatorul release real.
+
+**Regula 32 — 47 atribuiri reale găsite, curățare BLOCATĂ de mediul de
+execuție (2026-09-06).** La fel ca la CursorProWin: `git filter-repo` a
+fost refuzat explicit de clasificatorul automat al mediului Claude Code,
+chiar și pe o clonă de test — nu o amânare deliberată. Repo PUBLIC, deci
+Regula 32 se aplică integral. TODO real: procedura completă din Regula 32
+(Partea 1), rulată manual de Cristi sau dintr-o sesiune cu altă
+configurare de permisiuni.
