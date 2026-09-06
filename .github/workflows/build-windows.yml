@@ -24,6 +24,12 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    # [CLAUDE.md Regula 34, 2026-09-06] `secrets` NU e un context permis
+    # direct intr-un `if:` de pas (confirmat cu actionlint - "context
+    # 'secrets' is not allowed here"), doar la nivel de JOB. Fix: valoarea
+    # trece printr-un `env:` de job, pasii citesc `env.HAS_WIN_SELFSIGN`.
+    env:
+      HAS_WIN_SELFSIGN: ${{ secrets.WIN_SELFSIGN_PFX_BASE64 != '' }}
     strategy:
       matrix:
         arch: [x64, arm64]
@@ -41,6 +47,20 @@ jobs:
 
       - name: Publica exe-ul (self-contained, win-${{ matrix.arch }})
         run: dotnet publish Windows\MediaFlowMonitor\MediaFlowMonitor.csproj -c Release -r win-${{ matrix.arch }} --self-contained true -p:PublishSingleFile=false -o Publish\Windows\win-${{ matrix.arch }}
+
+      # [CLAUDE.md Regula 34, 2026-09-06] Semnare Self-Signed, DOAR pentru
+      # testare interna/cerc restrans (NU elimina SmartScreen pentru
+      # publicul larg - vezi codesigning/README-windows.md). Ruleaza DOAR
+      # daca secretele exista (Cristi le incarca o singura data, direct de
+      # pe Windows real - certificatul nu trece niciodata prin conversatia
+      # cu Claude) - altfel build-ul continua NESEMNAT, exact ca inainte.
+      - name: Semneaza MediaFlowMonitor.exe (Self-Signed, test intern)
+        if: ${{ env.HAS_WIN_SELFSIGN == 'true' }}
+        shell: pwsh
+        env:
+          WIN_SELFSIGN_PFX_BASE64: ${{ secrets.WIN_SELFSIGN_PFX_BASE64 }}
+          WIN_SELFSIGN_PFX_PASSWORD: ${{ secrets.WIN_SELFSIGN_PFX_PASSWORD }}
+        run: .\codesigning\sign-windows.ps1 -TargetPath "Publish\Windows\win-${{ matrix.arch }}\MediaFlowMonitor.exe"
 
       - name: Citeste versiunea din .csproj (Regula 14 - sursa unica de adevar)
         id: version
@@ -62,6 +82,14 @@ jobs:
       - name: Compileaza instalatorul (Inno Setup - preinstalat pe runner-ul windows-latest)
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppArch=${{ matrix.arch }} /DMyAppVersion=${{ steps.version.outputs.value }} Windows\installer.iss
+
+      - name: Semneaza installer-ul final (Self-Signed, test intern)
+        if: ${{ env.HAS_WIN_SELFSIGN == 'true' }}
+        shell: pwsh
+        env:
+          WIN_SELFSIGN_PFX_BASE64: ${{ secrets.WIN_SELFSIGN_PFX_BASE64 }}
+          WIN_SELFSIGN_PFX_PASSWORD: ${{ secrets.WIN_SELFSIGN_PFX_PASSWORD }}
+        run: .\codesigning\sign-windows.ps1 -TargetPath "dist\MediaFlowMonitorSetup-${{ matrix.arch }}-${{ steps.version.outputs.value }}.exe"
 
       - name: Creeaza copia STABILA (fara versiune in nume, pt. releases/latest/download)
         shell: pwsh

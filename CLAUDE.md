@@ -802,6 +802,61 @@ sau atinsă de-acum înainte:
   sub această regulă — e un indicator de stare semantic (verde =
   verificat), nu o iconiță de conținut, poate rămâne CSS pur.
 
+**34. Semnare Windows (Code Signing) obligatorie la build — Self-Signed
+ca implicit pentru testare internă, real (comercial) la lansare publică
+(2026-09-06).** Cerut explicit de Cristi, după clarificarea (verificată
+tehnic, nu presupusă) că un certificat self-signed NU elimină avertismentul
+SmartScreen/"Unknown Publisher" pentru publicul larg — doar un certificat
+real de la o CA publică (cu reputație acumulată) sau un certificat EV fac
+asta; din iunie 2023, CA/Browser Forum obligă orice certificat OV/EV nou
+să fie stocat pe token hardware/HSM cloud (Azure Trusted Signing, DigiCert
+KeyLocker, SSL.com eSigner), NU ca `.pfx` exportabil. Decizie explicită
+Cristi: self-signed ACUM (testare internă + cerc restrâns, cu `.cer`
+importat manual de colaboratori în Trusted Root), evaluare Azure Trusted
+Signing/EV la lansarea comercială publică — regula de mai jos NU
+presupune că self-signed rezolvă SmartScreen pentru clienți finali, e
+DOAR pentru etapa de testare.
+- **Certificatul (privat, cu cheie) NU trece NICIODATĂ prin conversația cu
+  Claude** — generarea (`New-SelfSignedCertificate`, doar posibilă pe
+  Windows real, Claude nu poate rula asta de pe Mac) și încărcarea ca
+  secret CI (`gh secret set`, valoare base64 a `.pfx` + parola) se fac
+  DIRECT de Cristi, pe mașina lui Windows — identic cu regula deja
+  existentă pentru parole/chei (Claude nu vede/manipulează credențiale).
+- **CI-ul de build Windows verifică ÎNTÂI existența secretelor** (ex.
+  `WIN_SELFSIGN_PFX_BASE64`/`WIN_SELFSIGN_PFX_PASSWORD`) — dacă lipsesc,
+  build-ul continuă NESEMNAT (exact ca varianta Mac, `APPLE_SIGN_IDENTITY_APP`
+  nesetat → semnare ad-hoc, niciodată o eroare de build). Dacă sunt
+  prezente: decodează `.pfx`-ul temporar, semnează cu `signtool.exe`
+  (localizat dinamic din Windows Kits, NU hardcodat o versiune) atât
+  executabilul cât și installer-ul final Inno Setup, cu timestamp
+  (`/tr .../td sha256`) ca semnătura să rămână validă și după expirarea
+  certificatului, apoi ȘTERGE fișierul `.pfx` temporar de pe disc imediat
+  după folosire.
+- **Verificare post-semnare obligatorie în CI**: `Get-AuthenticodeSignature`
+  (confirmă DOAR că fișierul are efectiv o semnătură atașată — nu
+  `signtool verify /pa`, care validează lanțul de încredere complet și
+  eșuează mereu pe un runner CI proaspăt, unde certificatul self-signed
+  nu e importat în Trusted Root; asta e normal pentru testare internă,
+  nu un eșec real) pe fiecare executabil semnat, ÎNAINTE ca pasul de
+  build să fie considerat trecut.
+- **Certificatul e COMUN pentru toate aplicațiile GDC** (decizie explicită
+  a lui Cristi) — secretele CI se numesc IDENTIC în toate repo-urile
+  (`WIN_SELFSIGN_PFX_BASE64`/`WIN_SELFSIGN_PFX_PASSWORD`), încărcate
+  separat, o dată per repo (GitHub Actions nu partajează secrete între
+  repo-uri) — Cristi le încarcă manual pe fiecare repo Windows nou
+  atins, folosind ACELAȘI `.pfx` deja generat, nu unul nou de fiecare
+  dată.
+- **Exportul `.cer` (public, fără cheie privată)** se publică alături de
+  installer — colaboratorii îl importă o SINGURĂ dată în Trusted Root,
+  valabil pentru TOATE aplicațiile GDC semnate cu acest certificat comun.
+- **Implementare de referință**: CGConvertor (`.github/workflows/
+  build-windows.yml` + `codesigning/`, 2026-09-06) — acest repo
+  (MediaFlow Monitor) e portul 1:1, adaptat la propriile căi
+  (`Publish\Windows\win-<arch>\MediaFlowMonitor.exe`,
+  `dist\MediaFlowMonitorSetup-<arch>-<versiune>.exe`), aplicat la
+  aceeași atingere (2026-09-06) — vezi `codesigning/README-windows.md`
+  din acest repo pentru pașii exacți ai lui Cristi.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## Structura repo-ului
