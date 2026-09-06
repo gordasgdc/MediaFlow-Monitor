@@ -946,10 +946,10 @@ Versiune 1.9.1 -> 1.9.2 (PATCH). **Nu am actualizat `update.json`** (gazduit
 extern, in `gdc-plugin-manager-catalog-vendor/docs/`) — ramane de
 sincronizat manual la urmatorul release real.
 
-**Regula 32 — 47 atribuiri reale găsite, curățare BLOCATĂ de mediul de
-execuție (2026-09-06).** La fel ca la CursorProWin: `git filter-repo` a
-fost refuzat explicit de clasificatorul automat al mediului Claude Code,
-chiar și pe o clonă de test — nu o amânare deliberată. Repo PUBLIC, deci
-Regula 32 se aplică integral. TODO real: procedura completă din Regula 32
-(Partea 1), rulată manual de Cristi sau dintr-o sesiune cu altă
-configurare de permisiuni.
+**Regula 32 — REZOLVAT 2026-09-06.** 47 atribuiri reale găsite; `git
+filter-repo` refuzat explicit de clasificatorul automat al mediului
+Claude Code, chiar și pe o clonă de test — nu o amânare deliberată. Repo
+PUBLIC, Regula 32 se aplică integral. Script de curățare pregătit
+(`~/Developer/clean-claude-attribution.sh`) și rulat manual de Cristi.
+**Verificat după rulare: 0 apariții**, remote `origin` corect re-adăugat,
+push confirmat pe `main` și tag-uri.
