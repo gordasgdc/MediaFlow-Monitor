@@ -1,5 +1,10 @@
 # Changelog — MediaFlow Monitor
 
+## Windows 1.9.3 (2026-09-11) — Semnare digitala a aplicatiei
+
+Executabilul si installer-ul Windows sunt acum semnate digital la fiecare build.
+Versiunea Mac ramane 1.9.2 (neschimbata - modificarea e strict pe Windows).
+
 Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 — o intrare per versiune, cu dată. Complementar jurnalului tehnic detaliat
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
