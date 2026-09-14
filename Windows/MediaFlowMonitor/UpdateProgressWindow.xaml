@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Actualizare"
         Width="380" SizeToContent="Height" MinWidth="380"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
         WindowStartupLocation="CenterScreen"
         Topmost="True"
         ShowInTaskbar="False"
@@ -14,7 +16,7 @@
     <StackPanel Margin="20,18">
         <TextBlock x:Name="TitleText" FontSize="13" FontWeight="SemiBold" />
         <TextBlock x:Name="StatusText" FontSize="11" Margin="0,6,0,12"
-                   Foreground="Gray" TextWrapping="Wrap" />
+                   Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
         <ProgressBar IsIndeterminate="True" Height="4" />
     </StackPanel>
 </Window>

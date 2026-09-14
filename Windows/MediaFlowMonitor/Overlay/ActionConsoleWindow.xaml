@@ -22,7 +22,7 @@
             <TextBlock x:Name="StatusText" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
         </DockPanel>
 
-        <Border Grid.Row="1" Background="#D8000000" CornerRadius="8" Padding="10">
+        <Border Grid.Row="1" Background="{DynamicResource ConsoleBackgroundBrush}" CornerRadius="8" Padding="10">
             <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding ActionLog}">
                     <ItemsControl.ItemTemplate>
