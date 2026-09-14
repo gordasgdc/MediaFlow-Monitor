@@ -1,5 +1,12 @@
 # Changelog — MediaFlow Monitor
 
+## Windows v1.9.4 (2026-09-14) — Contrast
+
+### Fixed
+- Fereastra de progres a actualizarii aparea alba cu text negru, indiferent de
+  tema aplicatiei.
+- Consola de actiuni ramanea inchisa la culoare si pe tema deschisa.
+
 ## Windows 1.9.3 (2026-09-11) — Semnare digitala a aplicatiei
 
 Executabilul si installer-ul Windows sunt acum semnate digital la fiecare build.
