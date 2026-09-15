@@ -56,6 +56,11 @@ public partial class App : Application
             _hotkey = new GlobalHotkey(modifiers: HotkeyModifiers.Control | HotkeyModifiers.Shift, key: 0x4D /* 'M' */);
             _hotkey.Pressed += (_, _) => _overlay.Toggle();
 
+            // Panoul apare la pornire daca utilizatorul n-a cerut explicit
+            // contrariul: altfel aplicatia traieste doar in tray si pare ca
+            // n-a pornit deloc (paritate cu MediaFlowMonitorApp.swift).
+            if (!MFMPreferences.Shared.StartMinimized) _overlay.Toggle();
+
             _ = CheckForUpdatesAsync(silent: true);
         }
         catch (Exception ex)

@@ -46,5 +46,9 @@ final class MFMPreferences: ObservableObject {
     /// banner. (Cererea inițială menționa `Option + Space`; scurtătura reală
     /// a acestei aplicații e ⌘⇧M — vezi GlobalShortcut.register.)
     static let shortcutDisplay = "⌘⇧M"
+
+    /// Aceeași scurtătură, spartă în taste individuale — bannerul le desenează
+    /// ca pe niște keycap-uri fizice, nu ca pe un singur șir.
+    static let shortcutKeys = ["⌘", "⇧", "M"]
     static let shortcutPlainText = "Command + Shift + M"
 }

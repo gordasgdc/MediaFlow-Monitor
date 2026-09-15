@@ -55,6 +55,49 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- Banner scurtatura globala (paritate cu shortcutBanner de pe Mac).
+                     Fara el, un utilizator care inchide panoul nu are cum sa afle
+                     cum il aduce inapoi: aplicatia traieste doar in tray. -->
+                <Border Margin="0,0,0,14" CornerRadius="10" Padding="14,10"
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center"
+                                  x:Name="StartMinimizedCheck"
+                                  Content="Pornește minimizat în tray"
+                                  Checked="OnStartMinimizedChanged" Unchecked="OnStartMinimizedChanged"
+                                  ToolTip="La următoarea pornire, panoul nu se mai deschide singur. Îl aduci cu scurtătura din stânga."/>
+                        <Button DockPanel.Dock="Right" x:Name="CopyShortcutButton" Content="Copiază"
+                                Margin="12,0" VerticalAlignment="Center" Padding="10,4"
+                                Click="OnCopyShortcut" ToolTip="Copiază scurtătura în clipboard"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⌨" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <StackPanel>
+                                <TextBlock Text="Afișare / Ascundere panou" Style="{StaticResource CaptionStyle}"/>
+                                <!-- Taste desenate ca niste keycap-uri fizice; culorile vin
+                                     exclusiv din tema (Regula 37). -->
+                                <ItemsControl ItemsSource="{Binding ShortcutKeys}" Margin="0,4,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,5,0" CornerRadius="7" Padding="10,5" MinWidth="34"
+                                                    Background="{DynamicResource WindowBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                                <TextBlock Text="{Binding}" FontSize="17" FontWeight="Bold"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
                 <!-- System Health -->
                 <WrapPanel>
                     <Border Style="{StaticResource CardStyle}" Width="330">
@@ -64,6 +107,23 @@
                                 <Ellipse Width="10" Height="10" HorizontalAlignment="Right" DockPanel.Dock="Right"
                                          Fill="{Binding OverallLevel, Converter={StaticResource LevelToBrush}}"/>
                             </DockPanel>
+                            <!-- Calificativ lizibil: cifrele brute cer interpretare,
+                                 userul vrea sa stie daca e cazul sa faca ceva. -->
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{Binding HealthLabel}" FontWeight="SemiBold" FontSize="13"
+                                           Foreground="{Binding HealthLevel, Converter={StaticResource LevelToBrush}}"/>
+                                <TextBlock Text="{Binding HealthDetail}" Style="{StaticResource CaptionStyle}"
+                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <!-- Aplicatia de montaj activa + consumul ei propriu de RAM -->
+                            <Border Margin="0,8,0,0" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left"
+                                    Background="{DynamicResource WindowBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Visibility="{Binding HasActiveNLE, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Aplicatia de montaj detectata ca activa si memoria pe care o ocupa.">
+                                <TextBlock Text="{Binding ActiveNLEText}" FontSize="11"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Border>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -319,16 +379,21 @@
                 <!-- Action bar -->
                 <WrapPanel Margin="0,0,0,4">
                     <Button Margin="0,0,10,10" Padding="12,7" Click="OnPurgeCacheClicked"
+                            ToolTip="Sterge fisierele temporare de randare din folderul de cache. Proiectele si mediile nu sunt atinse."
                             IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
                             Content="{Binding RunningAction, Converter={StaticResource ActionButtonText}, ConverterParameter='PurgeCache|Purge Cache|Purging…'}"/>
                     <Button Margin="0,0,10,10" Padding="12,7" Click="OnForceSyncClicked"
+                            ToolTip="Reciteste imediat log-ul DaVinci Resolve, fara sa astepte urmatoarea scanare."
                             IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
                             Content="{Binding RunningAction, Converter={StaticResource ActionButtonText}, ConverterParameter='ForceSyncLog|Force Sync Log|Syncing…'}"/>
                     <Button Margin="0,0,10,10" Padding="12,7" Click="OnOptimiseClicked"
+                            ToolTip="Elibereaza memoria inactiva a proceselor. Nimic nesalvat nu se pierde."
                             IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
                             Content="{Binding RunningAction, Converter={StaticResource ActionButtonText}, ConverterParameter='OptimiseSystem|Optimise System|Optimising…'}"/>
-                    <Button Margin="0,0,10,10" Padding="12,7" Content="Copy Diagnostics" Click="OnCopyDiagnosticsClicked"/>
+                    <Button Margin="0,0,10,10" Padding="12,7" Content="Copy Diagnostics" Click="OnCopyDiagnosticsClicked"
+                            ToolTip="Copiaza in clipboard un rezumat al starii sistemului, pentru raportare."/>
                     <Button Margin="0,0,10,10" Padding="12,7" Click="OnForceCloseDaVinciClicked"
+                            ToolTip="Inchide fortat procesele Resolve ramase agatate in fundal. Munca nesalvata din ele se pierde."
                             Visibility="{Binding HangingDaVinciDetected, Converter={StaticResource BoolToVis}}"
                             IsEnabled="{Binding RunningAction, Converter={StaticResource ActionIdle}}"
                             Foreground="IndianRed"

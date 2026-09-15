@@ -87,6 +87,54 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     public bool HangingDaVinciDetected { get => _hangingDaVinciDetected; private set { _hangingDaVinciDetected = value; Raise(); } }
     private bool _hangingDaVinciDetected;
 
+    /// Aplicatia de montaj activa (paritate cu activeNLE de pe Mac).
+    public ProcessInspector.NLEProcess? ActiveNLE
+    {
+        get => _activeNLE;
+        private set { _activeNLE = value; Raise(); Raise(nameof(ActiveNLEText)); Raise(nameof(HasActiveNLE)); }
+    }
+    private ProcessInspector.NLEProcess? _activeNLE;
+
+    /// Scurtatura globala, sparta in taste individuale — bannerul le deseneaza
+    /// ca pe niste keycap-uri fizice, nu ca pe un singur sir.
+    public string[] ShortcutKeys { get; } = { "Ctrl", "Shift", "M" };
+
+    public bool HasActiveNLE => _activeNLE is not null;
+
+    public string ActiveNLEText => _activeNLE is { } nle
+        ? (nle.RamGB > 0.01 ? $"{nle.Name} · {nle.RamGB:F1} GB" : nle.Name)
+        : "";
+
+    /// Calificativ lizibil pentru starea sistemului. Cifrele brute
+    /// („RAM 87%") cer interpretare; utilizatorul vrea sa stie daca e cazul
+    /// sa faca ceva.
+    public string HealthLabel => HealthSummary.Label;
+    public string HealthDetail => HealthSummary.Detail;
+    public MetricLevel HealthLevel => HealthSummary.Level;
+
+    private (string Label, string Detail, MetricLevel Level) HealthSummary
+    {
+        get
+        {
+            if (DiskInfo is { } disk && disk.FreeGB < 10)
+                return ("Critic", $"Disc plin — mai sunt {(int)disk.FreeGB} GB", MetricLevel.Critical);
+            if (SwapLevel == MetricLevel.Critical || RamFraction >= 0.85)
+                return ("Atenție", $"RAM ridicat ({(int)(RamFraction * 100)}%)", MetricLevel.Warning);
+            if (ThermalState == ThermalState.Critical)
+                return ("Critic", "Sistem supraîncălzit — throttling activ", MetricLevel.Critical);
+            if (OverallLevel == MetricLevel.Warning || SwapLevel == MetricLevel.Warning || ThermalState == ThermalState.Serious)
+                return ("Atenție", "Resursele sunt sub presiune", MetricLevel.Warning);
+            return ("Excelent", "Totul funcționează normal", MetricLevel.Ok);
+        }
+    }
+
+    private void RaiseHealth()
+    {
+        Raise(nameof(HealthLabel));
+        Raise(nameof(HealthDetail));
+        Raise(nameof(HealthLevel));
+    }
+
     /// Alertă nativă (System Banner) — OverlayWindow abonează un balloon tip
     /// pe NotifyIcon la acest eveniment, identic ca UX cu UNUserNotification pe Mac.
     public event EventHandler<(string Title, string Body)>? BannerRequested;
@@ -164,6 +212,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private void CheckHangingDaVinci()
     {
         HangingDaVinciDetected = ProcessInspector.AnyDaVinciProcessRunning() && !ProcessInspector.IsDaVinciResolveWindowVisible();
+        ActiveNLE = ProcessInspector.ActiveNLE();
         UpdateRecommendations();
     }
 
@@ -346,6 +395,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private void UpdateRecommendations()
     {
         Recommendations.Clear();
+        RaiseHealth();
         if (DiskInfo is { } disk)
         {
             if (disk.FreeGB < 10)
@@ -356,6 +406,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             if (disk.IsHealthy == false)
                 Recommendations.Add(new Recommendation("Disk health: reports FAILING — backup immediately", MetricLevel.Critical));
         }
+        // Praguri pe RAM, separat de swap: un sistem poate avea RAM la 90%
+        // FARA swap semnificativ, iar acela e exact momentul in care merita
+        // eliberata memoria.
+        if (RamFraction >= 0.95)
+            Recommendations.Add(new Recommendation($"Memorie: RAM la {(int)(RamFraction * 100)}% — eliberează memoria (Optimizează sistemul)", MetricLevel.Critical));
+        else if (RamFraction >= 0.85)
+            Recommendations.Add(new Recommendation($"Memorie: RAM la {(int)(RamFraction * 100)}% — recomandat: eliberează memoria", MetricLevel.Warning));
+
         if (SwapLevel == MetricLevel.Critical)
             Recommendations.Add(new Recommendation("System Memory: approaching swap limit", MetricLevel.Critical));
         else if (SwapLevel == MetricLevel.Warning)

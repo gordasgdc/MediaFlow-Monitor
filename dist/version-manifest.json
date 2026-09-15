@@ -8,7 +8,7 @@
     "macos": {
       "version": "1.10.0",
       "packageUrl": "dist/MediaFlowMonitor-1.10.0.pkg",
-      "sha256": "5da278fb566a40c089162398ae9edaf741cf1c3af9ce047fad490f15ae77ebed"
+      "sha256": "0108caabe9fb8d5e6e102d40569f214cab1dca0eac0a21db9fdce5c3f044840a"
     },
     "windows": {
       "version": "1.9.0",

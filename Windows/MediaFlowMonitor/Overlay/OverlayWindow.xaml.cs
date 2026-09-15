@@ -49,6 +49,7 @@ public partial class OverlayWindow : Window
             RedrawGpuChart();
             UpdateHealthDetailTexts();
             UpdateCacheDiskPanel();
+            StartMinimizedCheck.IsChecked = MFMPreferences.Shared.StartMinimized;
         };
     }
 
@@ -226,7 +227,37 @@ public partial class OverlayWindow : Window
 
     private void OnForceSyncClicked(object sender, RoutedEventArgs e) => _vm.ForceSyncLog();
 
-    private void OnOptimiseClicked(object sender, RoutedEventArgs e) => _vm.OptimiseSystem();
+    private void OnOptimiseClicked(object sender, RoutedEventArgs e)
+    {
+        if (!MFMPreferences.Shared.SuppressOptimiseWarning)
+        {
+            var dialog = new ConfirmActionWindow(
+                "Optimizezi memoria acum?",
+                "Sistemul va elibera memoria inactiva (working set-urile proceselor). "
+                + "Aplicatiile deschise raman deschise, dar unele pot parea incetinite cateva "
+                + "secunde, cat isi recitesc datele de pe disc. Nu se pierde nimic nesalvat.",
+                "Optimizeaza", "Nu ma mai intreba") { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            if (dialog.SuppressFuture) MFMPreferences.Shared.SuppressOptimiseWarning = true;
+        }
+        _vm.OptimiseSystem();
+    }
+
+    private void OnCopyShortcut(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Clipboard.SetText(MFMPreferences.ShortcutPlainText);
+            CopyShortcutButton.Content = "Copiat";
+            var reset = new System.Windows.Threading.DispatcherTimer { Interval = System.TimeSpan.FromSeconds(1.5) };
+            reset.Tick += (_, _) => { CopyShortcutButton.Content = "Copiaza"; reset.Stop(); };
+            reset.Start();
+        }
+        catch { /* clipboard ocupat de alt proces — nimic de raportat userului */ }
+    }
+
+    private void OnStartMinimizedChanged(object sender, RoutedEventArgs e) =>
+        MFMPreferences.Shared.StartMinimized = StartMinimizedCheck.IsChecked == true;
 
     private void OnShowConsoleClicked(object sender, RoutedEventArgs e) => ShowConsoleWindow();
 
@@ -248,11 +279,18 @@ public partial class OverlayWindow : Window
 
     private void OnPurgeCacheClicked(object sender, RoutedEventArgs e)
     {
-        var path = CacheFolderLocator.ActivePath;
-        var result = System.Windows.MessageBox.Show(
-            $"Golește tot conținutul din {path}?",
-            "Confirmare Purge Cache", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (result != MessageBoxResult.Yes) return;
+        if (!MFMPreferences.Shared.SuppressPurgeWarning)
+        {
+            var path = CacheFolderLocator.ActivePath;
+            var dialog = new ConfirmActionWindow(
+                "Golesti cache-ul?",
+                $"Se sterge tot continutul din:\n{path}\n\n"
+                + "Sunt fisiere temporare de randare — proiectele si mediile nu sunt atinse. "
+                + "Prima redare dupa golire va fi mai lenta, cat se reconstruiesc.",
+                "Sterge", "Sterge si nu ma mai intreba") { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            if (dialog.SuppressFuture) MFMPreferences.Shared.SuppressPurgeWarning = true;
+        }
         _vm.RequestPurgeCache(callback => callback(true));
     }
 

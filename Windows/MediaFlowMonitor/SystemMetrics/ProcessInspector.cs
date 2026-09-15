@@ -48,6 +48,51 @@ public static class ProcessInspector
         );
     }
 
+    // MARK: - NLE activ (paritate cu ProcessInspector.swift)
+
+    public readonly record struct NLEProcess(string Name, int Pid, double RamGB);
+
+    /// Numele sub care ruleaza efectiv procesele, nu cele din meniul Start.
+    /// Potrivire pe fragment, insensibila la majuscule: versiunile difera
+    /// („Resolve", „Adobe Premiere Pro 2026"), dar fragmentul ramane.
+    private static readonly (string Fragment, string Label)[] NleMarkers =
+    {
+        ("resolve", "DaVinci Resolve"),
+        ("premiere", "Adobe Premiere Pro"),
+        ("afterfx", "After Effects"),
+        ("mediacomposer", "Avid Media Composer"),
+        ("vegas", "VEGAS Pro"),
+    };
+
+    /// Aplicatia de montaj activa, daca ruleaza vreuna.
+    ///
+    /// Se accepta DOAR procesele cu fereastra principala (MainWindowHandle
+    /// nenul) — acelasi criteriu ca `activationPolicy == .regular` pe macOS:
+    /// un helper de fundal Adobe nu inseamna ca cineva monteaza, iar
+    /// badge-ul ar minti.
+    public static NLEProcess? ActiveNLE()
+    {
+        foreach (var process in Process.GetProcesses())
+        {
+            using (process)
+            {
+                try
+                {
+                    string name = process.ProcessName.ToLowerInvariant();
+                    var match = NleMarkers.FirstOrDefault(m => name.Contains(m.Fragment, StringComparison.Ordinal));
+                    if (match.Label is null) continue;
+                    if (process.MainWindowHandle == IntPtr.Zero) continue;
+                    return new NLEProcess(match.Label, process.Id, process.WorkingSet64 / 1_073_741_824.0);
+                }
+                catch
+                {
+                    // Access denied sau proces iesit intre timp — sarim peste.
+                }
+            }
+        }
+        return null;
+    }
+
     // MARK: - DaVinci Resolve zombie detection
 
     private static List<Process> DavinciProcesses() =>

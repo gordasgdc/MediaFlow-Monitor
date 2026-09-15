@@ -1,10 +1,21 @@
 # Changelog — MediaFlow Monitor
 
+## Windows v1.10.0 (2026-09-15) — Paritate cu macOS v1.10.0
+
+Aceleasi functii ca pe macOS, cu scurtatura corecta pentru platforma
+(Ctrl + Shift + M): panoul se deschide la pornire (daca nu s-a bifat
+„Porneste minimizat in tray"), badge de scurtatura cu taste desenate,
+confirmari inainte de Optimizare si Purge Cache (cu „Sterge si nu ma mai
+intreba"), tooltips pe toate actiunile, badge NLE activ, avertizari de RAM
+la 85%/95% si calificator de sanatate.
+
 ## macOS v1.10.0 (2026-09-15) — Vizibilitate, siguranta si context NLE
 
 ### Added
-- Banner de scurtatura in Dashboard: afiseaza combinatia reala (⌘⇧M), cu buton
-  de copiere si bifa „Porneste minimizat" (preferinta persistenta).
+- Badge de scurtatura prominent, mutat sus in Dashboard (sub bara de titlu):
+  tastele sunt desenate individual ca keycap-uri fizice, cu font de 17pt bold,
+  buton de copiere si bifa „Porneste minimizat" (preferinta persistenta).
+  Combinatia afisata e cea inregistrata efectiv (⌘⇧M), nu una presupusa.
 - Confirmare inainte de „Optimizeaza memoria" si inainte de golirea cache-ului,
   cu explicatie a efectului; dialogul de cache are optiunea „Sterge si nu ma mai
   intreba".

@@ -30,6 +30,7 @@ struct DashboardView: View {
         ScrollView {
             VStack(spacing: 14) {
                 topBar
+                shortcutBanner
                 LazyVGrid(columns: adaptiveColumns, spacing: 14) {
                     healthCard
                     healthDetailCard
@@ -41,7 +42,6 @@ struct DashboardView: View {
                 }
                 cacheDiskPanel
                 actionBar
-                shortcutBanner
             }
             .padding(16)
         }
@@ -91,15 +91,21 @@ struct DashboardView: View {
     /// aduce înapoi: aplicația n-are icon în Dock, iar iconița din bara de
     /// meniu e ușor de ratat.
     private var shortcutBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Image(systemName: "keyboard")
+                .font(.title3)
                 .foregroundStyle(.secondary)
-            Text("Afișare/ascundere panou:")
-                .foregroundStyle(.secondary)
-            Text(MFMPreferences.shortcutDisplay)
-                .fontWeight(.semibold)
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 5))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Afișare / Ascundere panou")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 5) {
+                    ForEach(Array(MFMPreferences.shortcutKeys.enumerated()), id: \.offset) { _, key in
+                        keycap(key)
+                    }
+                }
+            }
 
             Button {
                 let board = NSPasteboard.general
@@ -117,11 +123,27 @@ struct DashboardView: View {
 
             Toggle("Pornește minimizat în bara de meniu", isOn: $prefs.startMinimized)
                 .toggleStyle(.checkbox)
+                .font(.caption)
                 .help("La următoarea pornire, panoul nu se mai deschide singur. Îl aduci cu scurtătura de mai sus.")
         }
-        .font(.caption)
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.quaternary, lineWidth: 1))
+    }
+
+    /// O tastă fizică desenată: fundal propriu, margine și o umbră de 1px sub
+    /// ea, ca un keycap real. Culorile vin exclusiv din materialele
+    /// semantice (Regula 37) — arată corect și pe temă deschisă, și pe închisă.
+    private func keycap(_ label: String) -> some View {
+        Text(label)
+            .font(.system(.title3, design: .rounded).weight(.bold))
+            .monospacedDigit()
+            .foregroundStyle(.primary)
+            .frame(minWidth: 34)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(.tertiary, lineWidth: 1))
+            .shadow(color: .black.opacity(0.18), radius: 0, x: 0, y: 1)
     }
 
     private func purgeCacheNow() {
