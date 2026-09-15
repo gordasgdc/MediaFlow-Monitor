@@ -13,6 +13,9 @@ private func color(for level: MetricLevel) -> Color {
 struct DashboardView: View {
     @ObservedObject private var vm: DashboardViewModel
     @State private var showPurgeConfirm = false
+    @State private var showOptimiseConfirm = false
+    @State private var shortcutCopied = false
+    @ObservedObject private var prefs = MFMPreferences.shared
 
     init(metrics: SystemMetrics, logWatcher: DaVinciLogWatcher?) {
         _vm = ObservedObject(wrappedValue: DashboardViewModel(metrics: metrics, logWatcher: logWatcher))
@@ -38,6 +41,7 @@ struct DashboardView: View {
                 }
                 cacheDiskPanel
                 actionBar
+                shortcutBanner
             }
             .padding(16)
         }
@@ -48,19 +52,82 @@ struct DashboardView: View {
         .background(.ultraThinMaterial)
         .overlay(alignment: .bottom) { toastView }
         .confirmationDialog(
-            "Golește tot conținutul din \(CacheFolderLocator.activePath.path)?",
+            "Ștergere Cache Disc",
             isPresented: $showPurgeConfirm, titleVisibility: .visible
         ) {
-            Button("Golește Cache", role: .destructive) {
-                // Confirmarea a avut deja loc prin acest confirmationDialog —
-                // callback-ul de aprobare din requestPurgeCache primeste `true` direct.
-                vm.requestPurgeCache { callback in callback(true) }
+            Button("Șterge Cache", role: .destructive) { purgeCacheNow() }
+            Button("Șterge și nu mă mai întreba", role: .destructive) {
+                prefs.suppressPurgeWarning = true
+                purgeCacheNow()
             }
             Button("Anulează", role: .cancel) {}
+        } message: {
+            Text("Această acțiune va șterge fișierele temporare de randare din "
+                 + "\(CacheFolderLocator.activePath.path) pentru a elibera spațiu. "
+                 + "Proiectele video active vor necesita re-randare. Continuați?")
+        }
+        .confirmationDialog(
+            "Optimizare Memorie Sistem",
+            isPresented: $showOptimiseConfirm, titleVisibility: .visible
+        ) {
+            Button("Optimizează") {
+                vm.optimiseSystem()
+            }
+            Button("Anulează", role: .cancel) {}
+        } message: {
+            Text("Aplicația va elibera memoria RAM inactivă și fișierele temporare din memorie. "
+                 + "Procesul este sigur și NU va închide aplicațiile deschise.")
         }
         .sheet(isPresented: $vm.showActionConsole) {
             actionConsoleSheet
         }
+    }
+
+    // MARK: - Banner scurtătură
+
+    /// Scurtătura globală, vizibilă permanent.
+    ///
+    /// Fără ea, un utilizator care închide panoul nu are cum să afle cum îl
+    /// aduce înapoi: aplicația n-are icon în Dock, iar iconița din bara de
+    /// meniu e ușor de ratat.
+    private var shortcutBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "keyboard")
+                .foregroundStyle(.secondary)
+            Text("Afișare/ascundere panou:")
+                .foregroundStyle(.secondary)
+            Text(MFMPreferences.shortcutDisplay)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 5))
+
+            Button {
+                let board = NSPasteboard.general
+                board.clearContents()
+                board.setString(MFMPreferences.shortcutPlainText, forType: .string)
+                shortcutCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { shortcutCopied = false }
+            } label: {
+                Image(systemName: shortcutCopied ? "checkmark" : "doc.on.doc")
+            }
+            .buttonStyle(.borderless)
+            .help("Copiază scurtătura")
+
+            Spacer()
+
+            Toggle("Pornește minimizat în bara de meniu", isOn: $prefs.startMinimized)
+                .toggleStyle(.checkbox)
+                .help("La următoarea pornire, panoul nu se mai deschide singur. Îl aduci cu scurtătura de mai sus.")
+        }
+        .font(.caption)
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func purgeCacheNow() {
+        // Confirmarea (sau dezactivarea ei) a avut deja loc — callback-ul de
+        // aprobare primește `true` direct.
+        vm.requestPurgeCache { callback in callback(true) }
     }
 
     // MARK: - Live process console (Terminal-style)
@@ -167,8 +234,39 @@ struct DashboardView: View {
             HStack {
                 Text("System Health").font(.headline)
                 Spacer()
-                Circle().fill(color(for: vm.overallLevel)).frame(width: 10, height: 10)
+                // Calificativ, nu doar un bulin colorat: "Excelent" / "Atenție"
+                // se citesc dintr-o privire, un procent cere interpretare.
+                let health = vm.healthSummary
+                Text(health.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(color(for: health.level))
+                Circle().fill(color(for: health.level)).frame(width: 10, height: 10)
             }
+            Text(vm.healthSummary.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Ce aplicație de montaj rulează acum — contextul în care se
+            // citesc toate celelalte cifre.
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(vm.activeNLE == nil ? Color.secondary : Color.green)
+                    .frame(width: 7, height: 7)
+                if let nle = vm.activeNLE {
+                    Text("\(nle.name) activ (PID \(nle.pid))")
+                    if nle.ramGB > 0.05 {
+                        Text("· \(String(format: "%.1f", nle.ramGB)) GB RAM")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("Nicio aplicație de montaj activă").foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .font(.caption)
+            .help("Detectat automat dintre aplicațiile deschise: DaVinci Resolve, Premiere Pro, Final Cut Pro, After Effects, Avid.")
+
             HStack(spacing: 20) {
                 metricRing(label: "RAM", value: vm.ramFraction, level: vm.ramLevel)
                 metricRing(label: "Swap", value: vm.swapFraction, level: vm.swapLevel)
@@ -454,15 +552,24 @@ struct DashboardView: View {
     @ViewBuilder
     private var actionButtons: some View {
         actionButton(title: "Purge Cache", running: .purgeCache, runningTitle: "Purging…") {
-            showPurgeConfirm = true
+            // Avertismentul se poate dezactiva, dar acțiunea rămâne aceeași —
+            // vezi "Șterge și nu mă mai întreba" din dialog.
+            if prefs.suppressPurgeWarning { purgeCacheNow() } else { showPurgeConfirm = true }
         }
+        .help("Șterge fișierele temporare de randare din folderul de cache. Eliberează spațiu pe disc; proiectele active vor fi re-randate.")
+
         actionButton(title: "Force Sync Log", running: .forceSyncLog, runningTitle: "Syncing…") {
             vm.forceSyncLog()
         }
+        .help("Recitește de la zero fișierul de log al DaVinci Resolve. Poate dura o clipă pe loguri mari; nu modifică nimic din proiectele tale.")
+
         actionButton(title: "Optimise System", running: .optimiseSystem, runningTitle: "Optimising…") {
-            vm.optimiseSystem()
+            if prefs.suppressOptimiseWarning { vm.optimiseSystem() } else { showOptimiseConfirm = true }
         }
+        .help("Eliberează memoria RAM inactivă și fișierele temporare din memorie. Sigur — nu închide aplicațiile deschise.")
+
         Button("Copy Diagnostics") { vm.copyDiagnosticsToClipboard() }
+            .help("Copiază în clipboard un rezumat tehnic (sistem, memorie, disc, erori recente) pe care îl poți lipi într-un mesaj către suport.")
         if vm.hangingDaVinciDetected {
             actionButton(title: "Force Close Hanging DaVinci", running: .forceKillDaVinci, runningTitle: "Closing…") {
                 vm.forceCloseHangingDaVinci()

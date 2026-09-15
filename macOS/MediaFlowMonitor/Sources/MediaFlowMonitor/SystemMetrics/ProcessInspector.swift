@@ -79,6 +79,48 @@ enum ProcessInspector {
     /// PID-urile oricărui proces al cărui nume conține "Resolve" — include
     /// procesul principal ȘI helper-ele lui (ex. renderer-e Fusion), care
     /// pot rămâne agățate independent de fereastra principală.
+    /// O aplicație de montaj detectată ca rulând acum.
+    struct NLEProcess: Equatable {
+        let name: String
+        let pid: Int32
+        let ramGB: Double
+    }
+
+    /// Numele sub care rulează efectiv procesele, nu cele din meniul Apple.
+    /// Potrivire pe fragment, insensibilă la majuscule: versiunile diferă
+    /// („DaVinci Resolve", „Adobe Premiere Pro 2026"), dar fragmentul rămâne.
+    private static let nleMarkers: [(fragment: String, label: String)] = [
+        ("resolve", "DaVinci Resolve"),
+        ("premiere", "Adobe Premiere Pro"),
+        ("final cut", "Final Cut Pro"),
+        ("after effects", "After Effects"),
+        ("avid media composer", "Avid Media Composer"),
+    ]
+
+    /// Aplicația de montaj activă, dacă rulează vreuna.
+    ///
+    /// Se citesc DOAR aplicațiile cu interfață (`NSWorkspace.runningApplications`),
+    /// nu tot arborele de procese: un helper de fundal al Adobe nu înseamnă
+    /// că cineva montează, iar badge-ul ar minți.
+    static func activeNLE() -> NLEProcess? {
+        for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular {
+            guard let name = app.localizedName?.lowercased() else { continue }
+            guard let match = nleMarkers.first(where: { name.contains($0.fragment) }) else { continue }
+            return NLEProcess(name: match.label, pid: app.processIdentifier, ramGB: residentGB(pid: app.processIdentifier))
+        }
+        return nil
+    }
+
+    /// Memoria rezidentă a unui proces, în GB. 0 dacă nu se poate citi —
+    /// badge-ul afișează atunci doar numele și PID-ul, fără consum.
+    private static func residentGB(pid: Int32) -> Double {
+        var info = proc_taskinfo()
+        let size = MemoryLayout<proc_taskinfo>.size
+        let result = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(size))
+        guard result == Int32(size) else { return 0 }
+        return Double(info.pti_resident_size) / 1_073_741_824
+    }
+
     static func davinciProcessPIDs() -> [Int32] {
         var pidCount = proc_listallpids(nil, 0)
         guard pidCount > 0 else { return [] }

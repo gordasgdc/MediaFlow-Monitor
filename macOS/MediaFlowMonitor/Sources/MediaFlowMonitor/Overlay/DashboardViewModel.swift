@@ -92,6 +92,28 @@ final class DashboardViewModel: ObservableObject {
     // Zombie DaVinci Resolve.
     @Published var hangingDaVinciDetected: Bool = false
 
+    /// Aplicația de montaj detectată acum. `nil` = niciuna.
+    @Published var activeNLE: ProcessInspector.NLEProcess?
+
+    /// Calificativ lizibil pentru starea sistemului. Cifrele brute
+    /// („RAM 87%") cer interpretare; utilizatorul vrea să știe dacă e cazul
+    /// să facă ceva.
+    var healthSummary: (label: String, detail: String, level: MetricLevel) {
+        if let disk = diskInfo, disk.freeGB < 10 {
+            return ("Critic", "Disc plin — mai sunt \(Int(disk.freeGB)) GB", .critical)
+        }
+        if swapLevel == .critical || ramFraction >= 0.85 {
+            return ("Atenție", "RAM ridicat (\(Int(ramFraction * 100))%)", .warning)
+        }
+        if thermalState == .critical {
+            return ("Critic", "Sistem supraîncălzit — throttling activ", .critical)
+        }
+        if overallLevel == .warning || swapLevel == .warning || thermalState == .serious {
+            return ("Atenție", "Resursele sunt sub presiune", .warning)
+        }
+        return ("Excelent", "Totul funcționează normal", .ok)
+    }
+
     // Alerte native (System Banners) — trimise o singură dată per prag depășit.
     private var swapBannerSent = false
     private var diskBannerSent = false
@@ -150,9 +172,11 @@ final class DashboardViewModel: ObservableObject {
         cachePathIsManual = CacheFolderLocator.isManualOverride
         checkDisk()
         checkHangingDaVinci()
+        activeNLE = ProcessInspector.activeNLE()
         diskCheckTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.checkDisk()
             self?.checkHangingDaVinci()
+            self?.activeNLE = ProcessInspector.activeNLE()
         }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
@@ -388,6 +412,14 @@ final class DashboardViewModel: ObservableObject {
             if disk.isHealthy == false {
                 items.append(Recommendation(text: "Disk health: SMART reports FAILING — backup immediately", level: .critical))
             }
+        }
+        // Praguri pe RAM, separat de swap: un sistem poate avea RAM la 90%
+        // FARA swap semnificativ (macOS comprima inainte sa scrie pe disc),
+        // iar acela e exact momentul in care merita eliberata memoria.
+        if ramFraction >= 0.95 {
+            items.append(Recommendation(text: "Memorie: RAM la \(Int(ramFraction * 100))% — eliberează memoria (Optimise System)", level: .critical))
+        } else if ramFraction >= 0.85 {
+            items.append(Recommendation(text: "Memorie: RAM la \(Int(ramFraction * 100))% — recomandat: eliberează memoria", level: .warning))
         }
         if swapLevel == .critical {
             items.append(Recommendation(text: "System Memory: approaching swap limit", level: .critical))

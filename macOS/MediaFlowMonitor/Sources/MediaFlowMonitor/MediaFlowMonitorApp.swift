@@ -60,7 +60,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // fără fereastră), un utilizator nou credea că aplicația "nu pornește".
         // Status item permanent în bara de meniu + overlay arătat automat o dată.
         setupStatusItem()
-        overlayController.toggle()
+        // Comutatorul "Pornește minimizat" e implicit OFF — vezi MFMPreferences
+        // pentru de ce nu poate fi altfel la prima lansare.
+        if !MFMPreferences.shared.startMinimized {
+            overlayController.toggle()
+        }
         UpdateChecker.shared.checkAtLaunch()
     }
 

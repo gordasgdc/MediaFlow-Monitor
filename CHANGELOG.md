@@ -1,5 +1,24 @@
 # Changelog — MediaFlow Monitor
 
+## macOS v1.10.0 (2026-09-15) — Vizibilitate, siguranta si context NLE
+
+### Added
+- Banner de scurtatura in Dashboard: afiseaza combinatia reala (⌘⇧M), cu buton
+  de copiere si bifa „Porneste minimizat" (preferinta persistenta).
+- Confirmare inainte de „Optimizeaza memoria" si inainte de golirea cache-ului,
+  cu explicatie a efectului; dialogul de cache are optiunea „Sterge si nu ma mai
+  intreba".
+- Tooltips pe toate cele patru butoane de actiune.
+- Detectare NLE activ (DaVinci Resolve / Premiere Pro / Final Cut Pro) cu
+  consumul propriu de RAM, afisat ca badge in cardul de stare.
+- Avertizari de memorie cu recomandari concrete la RAM ≥85% si ≥95%, plus
+  calificator de sanatate (Excelent / Atentie / Critic).
+
+### Fixed
+- `scripts/build-macos-app.sh` esua pentru ca `dist/version-manifest.json` a fost
+  sters din greseala la v1.9.1, desi `sync-site.sh` il foloseste ca sursa de
+  adevar pentru update.json. Fisierul a fost restaurat.
+
 ## Windows v1.9.4 (2026-09-14) — Contrast
 
 ### Fixed
