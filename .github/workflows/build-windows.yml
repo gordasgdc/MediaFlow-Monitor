@@ -13,13 +13,23 @@ name: Build MediaFlow Monitor (Windows)
 # release nou per tag (spre deosebire de CGConvertor/gdc-production-manager):
 # folosește un SINGUR release perpetuu (`v1.0.0`, "latest"), cu toate
 # versiunile acumulate ca asset-uri (`gh release upload v1.0.0 ... --clobber`,
-# la fel ca pe Mac — vezi jurnalul de release din CLAUDE.md). Publicarea
-# efectivă pe acel release rămâne un pas manual (`gh release upload`),
-# după ce artefactul de aici e verificat.
+# la fel ca pe Mac — vezi jurnalul de release din CLAUDE.md). Încărcarea pe
+# acel release se face automat la push pe `main` (pasul final de mai jos) —
+# nu mai e nevoie de nicio mașină Windows fizică. Un `workflow_dispatch`
+# manual construiește și verifică, dar NU publică, dacă `publish` e `false`.
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Încarcă instalatoarele pe release-ul v1.0.0"
+        type: boolean
+        default: false
+
+# Necesar pentru `gh release upload` cu GITHUB_TOKEN-ul implicit.
+permissions:
+  contents: write
 
 jobs:
   build-windows:
@@ -104,3 +114,19 @@ jobs:
           path: |
             dist\MediaFlowMonitorSetup-${{ matrix.arch }}-${{ steps.version.outputs.value }}.exe
             dist\MediaFlowMonitorSetup-${{ matrix.arch }}.exe
+
+      # Release-ul e unul singur si perpetuu (`v1.0.0`, "latest"): se incarca
+      # ATAT copia versionata, CAT si cea stabila (Regula 17) — `--clobber`
+      # suprascrie doar aceste doua nume, restul asset-urilor acumulate raman
+      # neatinse. Cele doua arhitecturi ruleaza in paralel pe nume diferite,
+      # deci nu se calca una pe alta.
+      - name: Publica instalatoarele pe release-ul v1.0.0
+        if: ${{ github.event_name == 'push' || inputs.publish }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.0 `
+            "dist\MediaFlowMonitorSetup-${{ matrix.arch }}-${{ steps.version.outputs.value }}.exe" `
+            "dist\MediaFlowMonitorSetup-${{ matrix.arch }}.exe" `
+            --clobber --repo ${{ github.repository }}
