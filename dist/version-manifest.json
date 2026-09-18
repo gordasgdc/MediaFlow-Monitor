@@ -1,14 +1,14 @@
 {
   "_comment": "Schelet generic de auto-update, consumat local. Sursa reala de update pentru aplicatie e docs/media-flow-monitor/update.json (gordas.dev), citit de UpdateChecker.swift.",
   "channel": "public-beta",
-  "latestVersion": "1.10.0",
+  "latestVersion": "1.10.1",
   "minSupportedVersion": "1.0.0",
-  "releaseNotes": "v1.10.0: pornire vizibila cu banner de scurtatura (Cmd+Shift+M), confirmari de siguranta inainte de Optimizare si Golire cache, tooltips pe toate actiunile, detectare NLE activ (DaVinci/Premiere/Final Cut) cu consum RAM si avertizari de memorie cu recomandari concrete.",
+  "releaseNotes": "v1.10.1: mutarea \u00een folderul Aplica\u021bii nu mai las\u0103 aplica\u021bia izolat\u0103 de macOS \u2014 nu mai cere mutarea la fiecare pornire \u0219i nu mai duce aplica\u021bia instalat\u0103 la Co\u0219. Windows: f\u0103r\u0103 schimb\u0103ri.",
   "platforms": {
     "macos": {
-      "version": "1.10.0",
-      "packageUrl": "dist/MediaFlowMonitor-1.10.0.pkg",
-      "sha256": "0108caabe9fb8d5e6e102d40569f214cab1dca0eac0a21db9fdce5c3f044840a"
+      "version": "1.10.1",
+      "packageUrl": "dist/MediaFlowMonitor-1.10.1.pkg",
+      "sha256": "0ac76dd82abcaddb84a965a1dfef6a4261b92d2cce7ce1d8a2adeea192042a06"
     },
     "windows": {
       "version": "1.9.0",

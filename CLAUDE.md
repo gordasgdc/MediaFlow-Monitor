@@ -179,6 +179,32 @@ x64 + arm64, versionate si stabile. Versiunea Mac ramane 1.9.2 (neschimbata,
 modificarea e strict pe Windows; cele doua platforme au campuri separate in
 `dist/version-manifest.json`).
 
+## Etapa 2026-09-19 — macOS v1.10.1: AppMover cu App Translocation
+
+- `AppMover.swift` portat din GDC Firewall (Regula 40): locația se judecă
+  după original (`SecTranslocateCreateOriginalPathForURL`), copia din
+  `/Applications` primește carantina FĂRĂ bitul 0x0080 (carantina rămâne),
+  o instalare deja izolată se repară pe loc (doar atributul + repornire) —
+  niciodată copiere peste sine sau copia instalată la Coș. `~/Applications`
+  rămâne acceptat (Regula 18). Față de referință: carantina se ia din
+  original; după copiere se verifică că bitul a dispărut (altfel eroare, nu
+  buclă); izolată fără bit = nu repornește (fără buclă).
+- `DiagnosticLog.swift` nou (Regula 39) → `~/Library/Logs/MediaFlowMonitor.log` +
+  unified log; `scripts/logs.sh`; dezinstalatorul șterge și logul.
+- Windows urcă și el la 1.10.1, FĂRĂ schimbări de cod: `update.json` are un
+  singur câmp `version`, citit și de `UpdateChecker.cs`. Cu 1.10.1 doar pe Mac,
+  clienții Windows ar fi fost trimiși spre o versiune inexistentă → buclă de
+  actualizare (Regula 35 cere minimul). `installer.iss` păstrează 1.9.0 doar ca
+  valoare implicită — CI-ul o suprascrie din `.csproj` (`/DMyAppVersion`).
+- Test live 2026-09-19, macOS 26.6.2, Mac de dezvoltare (SIP dezactivat):
+  build notarizat + stapled, zip cu carantină `0083;…;Safari`, dezarhivat cu
+  Archive Utility, pornit din `~/Downloads`. Verificat: izolare detectată, calea admin (copia root din .pkg înlocuită după parola introdusă de Cristi), carantină `0043`, original la Coș, repornit neizolat; reparare pe loc (`00c3` pus manual pe copia din `/Applications` → `0043`, repornit neizolat, fără buclă).
+- Neverificat: nimic în plus față de SIP. Cu SIP activ (Regula 42) — calea nu folosește
+  nimic dependent de SIP, dar n-a rulat pe un astfel de Mac.
+- Publicat 2026-09-19 pe release-ul perpetuu `v1.0.0` (Mac: `gh release upload
+  --clobber`; Windows: CI la push pe `main`), `update.json` de pe `gordas.dev`
+  sincronizat după ce toate asset-urile erau live.
+
 ### Completări specifice acestui repo, mutate din fosta Partea 1 (2026-09-18)
 
 Păstrate verbatim. Regula generală la care se referă fiecare e în
