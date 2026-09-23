@@ -261,3 +261,10 @@ reală decât pentru testul manual final de instalare/rulare.**
   `dist\MediaFlowMonitorSetup-<arch>-<versiune>.exe`), aplicat la
   aceeași atingere (2026-09-06) — vezi `codesigning/README-windows.md`
   din acest repo pentru pașii exacți ai lui Cristi.
+
+### Handoff — fișierul de stare (Regula 50, `~/Developer/CLAUDE.md`)
+
+- Fișierul de stare al acestui proiect: `PROJECT_STATE.md` (rădăcina repo-ului). La orice sesiune nouă se citește
+  ÎNTÂI el, apoi doar fragmentele strict necesare; se actualizează la milestone-uri și obligatoriu la final.
+  Dacă lipsește, se creează la prima sesiune care atinge proiectul. Repo PUBLIC: fișierul e intern, listat în `.gitignore` (doar local, Regula 29).
+- Restructurarea/ștergerea lui și orice modificare a acestui `CLAUDE.md`: doar cu diff-ul arătat și acordul lui Cristi.
